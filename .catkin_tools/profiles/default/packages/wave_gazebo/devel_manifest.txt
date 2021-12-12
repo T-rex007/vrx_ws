@@ -1,0 +1,8 @@
+vrx/wave_gazebo
+/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/wave_gazebo/cmake.lock /home/kevin/development/VRX-Competition/vrx_ws/devel/./cmake.lock
+/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/wave_gazebo/lib/pkgconfig/wave_gazebo.pc /home/kevin/development/VRX-Competition/vrx_ws/devel/lib/pkgconfig/wave_gazebo.pc
+/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/wave_gazebo/share/wave_gazebo/cmake/wave_gazeboConfig.cmake /home/kevin/development/VRX-Competition/vrx_ws/devel/share/wave_gazebo/cmake/wave_gazeboConfig.cmake
+/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/wave_gazebo/share/wave_gazebo/cmake/wave_gazeboConfig-version.cmake /home/kevin/development/VRX-Competition/vrx_ws/devel/share/wave_gazebo/cmake/wave_gazeboConfig-version.cmake
+/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/wave_gazebo/share/wave_gazebo/worlds/ocean.world /home/kevin/development/VRX-Competition/vrx_ws/devel/share/wave_gazebo/worlds/ocean.world
+/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/wave_gazebo/share/wave_gazebo/worlds/ocean_buoys.world /home/kevin/development/VRX-Competition/vrx_ws/devel/share/wave_gazebo/worlds/ocean_buoys.world
+/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/wave_gazebo/share/wave_gazebo/worlds/ocean_wamv.world /home/kevin/development/VRX-Competition/vrx_ws/devel/share/wave_gazebo/worlds/ocean_wamv.world
