@@ -1,5 +1,0 @@
-controllers
-/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/controllers/cmake.lock /home/kevin/development/VRX-Competition/vrx_ws/devel/./cmake.lock
-/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/controllers/lib/pkgconfig/controllers.pc /home/kevin/development/VRX-Competition/vrx_ws/devel/lib/pkgconfig/controllers.pc
-/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/controllers/share/controllers/cmake/controllersConfig.cmake /home/kevin/development/VRX-Competition/vrx_ws/devel/share/controllers/cmake/controllersConfig.cmake
-/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/controllers/share/controllers/cmake/controllersConfig-version.cmake /home/kevin/development/VRX-Competition/vrx_ws/devel/share/controllers/cmake/controllersConfig-version.cmake

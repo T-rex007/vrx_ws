@@ -1,6 +1,0 @@
-vrx/wamv_gazebo
-/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/wamv_gazebo/cmake.lock /home/kevin/development/VRX-Competition/vrx_ws/devel/./cmake.lock
-/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/wamv_gazebo/lib/pkgconfig/wamv_gazebo.pc /home/kevin/development/VRX-Competition/vrx_ws/devel/lib/pkgconfig/wamv_gazebo.pc
-/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/wamv_gazebo/share/wamv_gazebo/urdf/wamv_gazebo.urdf /home/kevin/development/VRX-Competition/vrx_ws/devel/share/wamv_gazebo/urdf/wamv_gazebo.urdf
-/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/wamv_gazebo/share/wamv_gazebo/cmake/wamv_gazeboConfig-version.cmake /home/kevin/development/VRX-Competition/vrx_ws/devel/share/wamv_gazebo/cmake/wamv_gazeboConfig-version.cmake
-/home/kevin/development/VRX-Competition/vrx_ws/devel/.private/wamv_gazebo/share/wamv_gazebo/cmake/wamv_gazeboConfig.cmake /home/kevin/development/VRX-Competition/vrx_ws/devel/share/wamv_gazebo/cmake/wamv_gazeboConfig.cmake
