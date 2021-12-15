@@ -24,8 +24,9 @@ int main(int argc, char **argv)
 
     // Main access point to communications with the ROS system
     ros::NodeHandle n;
-    ros::Subscriber gps = n.subscribe("chatter", 100, GPSCallback);
-    ros::Subscriber goal = n.subscribe("chatter", 100, GoalCallback);
+    ros::Subscriber gps = n.subscribe("/wamv/sensors/gps/gps/fix", 100, GPSCallback);
+    ros::Subscriber goal = n.subscribe("/wamv/goal", 100, GoalCallback);
+    ros::Publicher front_left = n.
 
     
 
