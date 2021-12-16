@@ -30,6 +30,41 @@ void WAMV::UpdateGoal(float aim[2])
     UpdateAngle();
 }
 
+///@brief Returns the trajectory of the target
+float WAMV::ReturnAngle()
+{
+   return angle;
+}
+
+///@brief Calculates the Angle the boat will turn
+float WAMV::CalcAngle(float ref_angle)
+{
+    float difference;
+    difference = ref_angle - heading;
+    if (abs(difference) > 180)  //consider accounting for momentum in turning
+    { 
+        difference = remainder((360 - difference), 360);
+
+    } 
+   return difference;
+}
+
+///@brief Turns the boat
+float WAMV::TurnBoat(float ref_angle)
+{
+    float thrusters[4][2];
+    thrusters[1][1] = 1;
+    thrusters[1][2] = remainder(ref_angle,90);
+    thrusters[2][1] = 1;
+    thrusters[2][2] = remainder(ref_angle,90);
+    thrusters[3][1] = 1;
+    thrusters[3][2] = 0;
+    thrusters[4][1] = 1;
+    thrusters[4][2] = 0;
+    return thrusters;
+}
+
+
 ///@brief Update the target vector and reference angle to goal
 void WAMV::UpdateAngle()
 {

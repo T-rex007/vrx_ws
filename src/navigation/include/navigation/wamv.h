@@ -20,6 +20,15 @@ public:
     ///@brief Update the goal position (x, y)
     void UpdateGoal(float aim[2]);
 
+    ///@brief Returns the trajectory of the target
+    float ReturnAngle();
+
+    ///@brief Calculates the Angle the boat will turn
+    float CalcAngle(float ref_angle);
+
+    ///@brief Turns the boat
+    float TurnBoat(float ref_angle);
+
     ///@brief Update the target vector and reference angle to goal
     void UpdateAngle();
 

@@ -4,7 +4,7 @@
 #include "controllers/pid.h"
 
 
-#define SAMPLE 50
+#define SAMPLE 10
 #define QUEUE 50
 
 WAMV boat;
@@ -22,8 +22,12 @@ void GoalCallback(const std::msgs::Float::ConstPtr& msg)
 
 int main(int argc, char **argv)
 {
+    float calculated;
+    float difference;
+    float thrusters[4][2];
     // Initialize a ROS node called 'navigation'
     ros::init(argc, argv, "navigation");
+    ros::Rate loop_rate(SAMPLE);
 
     // Main access point to communications with the ROS system
     ros::NodeHandle n;
@@ -39,10 +43,23 @@ int main(int argc, char **argv)
     ros::Publisher right_rear_angle = n.advertise<std_msgs::Float32>("/wamv/thrusters/right_rear_thrust_angle", QUEUE);
 
     
-
+    controller.SetGains(1,1,1);
     while ros.ok()
     {
+        
+        calculated = controller.Compute(boat.ReturnAngle());
+        difference = boat.CalcAngle(calculated);
+        thrusters = boat.TurnBoat(difference);
+        left_front_cmd.published(thrusters[1][1]);
+        left_front_angle.published(thrusters[1][2]);
+        right_front_cmd.published(thrusters[2][1]);
+        right_front_angle.published(thrusters[2][2]);
+        left_rear_cmd.published(thrusters[3][1]);
+        left_rear_angle.published(thrusters[3][2]);
+        right_rear_cmd.published(thrusters[4][1]);
+        right_rear_angle.published(thrusters[4][2]);
 
+        loop_rate.sleep();
     }
 
     // Wait for this node to be shutdown, whether through Ctrl-C, ros::shutdown() or similar
