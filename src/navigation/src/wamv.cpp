@@ -4,7 +4,26 @@
 WAMV::WAMV(ros::NodeHandle *node_handle)
     : node(*node_handle)
 {
-    return;
+    gps = node.subscribe("/wamv/sensors/gps/gps/fix", QUEUE, &WAMV::GPSCallback, this);
+    goal_node = node.subscribe("/wamv/goal", QUEUE, &WAMV::GoalCallback, this);
+
+    // left_front_cmd = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_cmd", QUEUE);
+    // left_front_angle = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_angle", QUEUE);
+    // right_front_cmd = node.advertise<std_msgs::Float32>("/wamv/thrusters/right_front_thrust_cmd", QUEUE);
+    // right_front_angle = node.advertise<std_msgs::Float32>("/wamv/thrusters/right_front_thrust_angle", QUEUE);
+    // left_rear_cmd = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_rear_thrust_cmd", QUEUE);
+    // left_rear_angle = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_rear_thrust_angle", QUEUE);
+    // right_rear_cmd = node.advertise<std_msgs::Float32>("/wamv/thrusters/right_rear_thrust_cmd", QUEUE);
+    // right_rear_angle = node.advertise<std_msgs::Float32>("/wamv/thrusters/right_rear_thrust_angle", QUEUE);
+
+    thrusters_pub[0] = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_cmd", QUEUE);
+    thrusters_pub[1] = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_angle", QUEUE);
+    thrusters_pub[2] = node.advertise<std_msgs::Float32>("/wamv/thrusters/right_front_thrust_cmd", QUEUE);
+    thrusters_pub[3] = node.advertise<std_msgs::Float32>("/wamv/thrusters/right_front_thrust_angle", QUEUE);
+    thrusters_pub[4] = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_rear_thrust_cmd", QUEUE);
+    thrusters_pub[5] = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_rear_thrust_angle", QUEUE);
+    thrusters_pub[6] = node.advertise<std_msgs::Float32>("/wamv/thrusters/right_rear_thrust_cmd", QUEUE);
+    thrusters_pub[7] = node.advertise<std_msgs::Float32>("/wamv/thrusters/right_rear_thrust_angle", QUEUE);
 }
 
 /// @brief Destructor for the WAMV
@@ -16,8 +35,8 @@ WAMV::~WAMV()
 ///@brief Update wamv location (x, y) and heading (in degrees)
 void WAMV::UpdateLocal(double longitude, double latitude, float theta)
 {
-    local[0] = longitude;
-    local[1] = latitude;   //consider using array of len 3
+    location[0] = longitude;
+    location[1] = latitude;   //consider using array of len 3
     heading = theta;
 
     UpdateAngle();
@@ -52,20 +71,17 @@ float WAMV::CalcAngle(float ref_angle)
 }
 
 ///@brief Turns the boat
-float** WAMV::TurnBoat(float ref_angle)
+std::array<std::tuple<float, float>, 4> WAMV::TurnBoat(float ref_angle)
 {
-    float thrusters[4] = {1,1,1,1};
-    float angle[4] = {remainder(ref_angle,90),remainder(ref_angle,90),0,0};
-    float* arr[2] = {thrusters, angle};
-    // thrusters[1][1] = 1;
-    // //thrusters[1][2] = remainder(ref_angle,90);
-    // thrusters[2][1] = 1;
-    // //thrusters[2][2] = remainder(ref_angle,90);
-    // thrusters[3][1] = 1;
-    // //thrusters[3][2] = 0;
-    // thrusters[4][1] = 1;
-    // //thrusters[4][2] = 0;
-    return arr;
+    std::array<std::tuple<float, float>, 4> thrusters;
+    float cmd[4] = {1,1,1,1};
+    float angle[4] = {remainderf(ref_angle,90), remainderf(ref_angle,90),0,0};
+    for (int i = 0; i < 4; i++)
+    {
+        thrusters[i] = std::make_tuple(cmd[i], angle[i]);
+    }
+
+    return thrusters;
 }
 
 
@@ -92,3 +108,31 @@ void WAMV::UpdateAngle()
     std::copy(target, target + 2, target_vector);
     angle = ref_angle;
 }
+
+void WAMV::UpdateThruster(std::array<std::tuple<float, float>, 4> thrusters)
+{
+    std_msgs::Float32 msg;
+
+    for(int i = 0; i < 4; i++)
+    {
+        msg.data = std::get<0>(thrusters[i]);
+        thrusters_pub[i * 2].publish(msg);
+        msg.data = std::get<1>(thrusters[i]);
+        thrusters_pub[(i * 2) + 1].publish(msg);
+    }
+}
+
+void WAMV::GPSCallback(const sensor_msgs::NavSatFix msg)
+{
+    location[0] = msg.longitude;
+    location[1] = msg.longitude;
+    UpdateAngle();
+}  
+
+void WAMV::GoalCallback(const sensor_msgs::NavSatFix msg)
+{
+    goal[0] = msg.longitude;
+    goal[1] = msg.longitude;
+    UpdateAngle();
+}
+
