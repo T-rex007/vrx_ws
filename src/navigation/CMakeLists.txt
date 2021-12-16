@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   controllers
+  vrx_gazebo
 )
 
 ################################################
@@ -56,7 +57,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp std_msgs controllers
+  CATKIN_DEPENDS roscpp std_msgs controllers vrx_gazebo
 )
 
 ###########

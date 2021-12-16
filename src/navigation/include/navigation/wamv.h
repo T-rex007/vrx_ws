@@ -4,6 +4,10 @@
 #include <ros/ros.h>
 #include <std_msgs/Float32.h>
 #include <sensor_msgs/NavSatFix.h>
+#include <sensor_msgs/Imu.h>
+#include <geometry_msgs/Quaternion.h>
+#include <tf/transform_datatypes.h>
+#include <geographic_msgs/GeoPoseStamped.h>
 #include <tuple>
 #include <array>
 #include <math.h>
@@ -40,18 +44,24 @@ public:
 
     void UpdateThruster(std::array<std::tuple<float, float>, 4> thrusters);
 
+    double ConvertOrientation(geometry_msgs::Quaternion quat);
+
     void GPSCallback(const sensor_msgs::NavSatFix msg);
 
-    void GoalCallback(const sensor_msgs::NavSatFix msg);
+    void IMUCallback(const sensor_msgs::Imu msg);
+
+    void GoalCallback(const geographic_msgs::GeoPoseStamped msg);
+
 
 private:
     ros::NodeHandle node; // ROS node handler
     double location[2];   //x and y pos of robot center
     float heading;    //heading of front of the robot 
-    float goal[2];  //location of goal position
+    float goal[3];  //location of goal position
     float target_vector[2];     //vector from current location to the goal
-    float angle;        //angle between heading and goal distance
+    float angle;       //angle between heading and goal distance
     ros::Subscriber gps;
+    ros::Subscriber imu;
     ros::Subscriber goal_node;
     // ros::Publisher left_front_cmd;
     // ros::Publisher left_front_angle;

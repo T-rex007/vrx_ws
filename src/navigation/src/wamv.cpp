@@ -5,7 +5,8 @@ WAMV::WAMV(ros::NodeHandle *node_handle)
     : node(*node_handle)
 {
     gps = node.subscribe("/wamv/sensors/gps/gps/fix", QUEUE, &WAMV::GPSCallback, this);
-    goal_node = node.subscribe("/wamv/goal", QUEUE, &WAMV::GoalCallback, this);
+    imu = node.subscribe("/wamv/sensors/imu/imu/data", QUEUE, &WAMV::IMUCallback, this);
+    goal_node = node.subscribe("/wrx/station_keeping/goal", QUEUE, &WAMV::GoalCallback, this);
 
     // left_front_cmd = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_cmd", QUEUE);
     // left_front_angle = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_angle", QUEUE);
@@ -74,7 +75,7 @@ float WAMV::CalcAngle(float ref_angle)
 std::array<std::tuple<float, float>, 4> WAMV::TurnBoat(float ref_angle)
 {
     std::array<std::tuple<float, float>, 4> thrusters;
-    float cmd[4] = {1,1,1,1};
+    float cmd[4] = {0.1,0.1,0.1,0.1};
     float angle[4] = {remainderf(ref_angle,90), remainderf(ref_angle,90),0,0};
     for (int i = 0; i < 4; i++)
     {
@@ -122,17 +123,39 @@ void WAMV::UpdateThruster(std::array<std::tuple<float, float>, 4> thrusters)
     }
 }
 
+double WAMV::ConvertOrientation(geometry_msgs::Quaternion quat)
+{
+    double roll;
+    double pitch;
+    double yaw;
+    tf::Quaternion q;
+    tf::quaternionMsgToTF(quat, q);
+    tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+    yaw = yaw * 180.0 / M_PI; // conversion to degrees
+    if(yaw < 0) 
+    {
+        yaw += 360.0;
+    }
+    return yaw;
+}
+
 void WAMV::GPSCallback(const sensor_msgs::NavSatFix msg)
 {
     location[0] = msg.longitude;
     location[1] = msg.longitude;
     UpdateAngle();
-}  
+} 
 
-void WAMV::GoalCallback(const sensor_msgs::NavSatFix msg)
+void WAMV::IMUCallback(const sensor_msgs::Imu msg)
 {
-    goal[0] = msg.longitude;
-    goal[1] = msg.longitude;
+    heading = ConvertOrientation(msg.orientation);
+}
+
+void WAMV::GoalCallback(const geographic_msgs::GeoPoseStamped msg)
+{
+    goal[0] = msg.pose.position.longitude;
+    goal[1] = msg.pose.position.longitude;
+    goal[2] = ConvertOrientation(msg.pose.orientation);
     UpdateAngle();
 }
 
