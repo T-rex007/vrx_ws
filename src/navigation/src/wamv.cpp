@@ -14,18 +14,20 @@ WAMV::~WAMV()
 }
 
 ///@brief Update wamv location (x, y) and heading (in degrees)
-void WAMV::UpdateLocal(float local[2], float theta)
+void WAMV::UpdateLocal(double longitude, double latitude, float theta)
 {
-    std::copy(local, local + 2 , location);   //consider using array of len 3
+    local[0] = longitude;
+    local[1] = latitude;   //consider using array of len 3
     heading = theta;
 
     UpdateAngle();
 }
 
 ///@brief Update the goal position (x, y)
-void WAMV::UpdateGoal(float aim[2])
+void WAMV::UpdateGoal(double longitude, double latitude)
 {
-    std::copy(aim, aim + 2 , goal); //find how to automate finding the end of array
+    goal[0] = longitude;
+    goal[1] = latitude;  //find how to automate finding the end of array
 
     UpdateAngle();
 }
@@ -50,18 +52,20 @@ float WAMV::CalcAngle(float ref_angle)
 }
 
 ///@brief Turns the boat
-float WAMV::TurnBoat(float ref_angle)
+float** WAMV::TurnBoat(float ref_angle)
 {
-    float thrusters[4][2];
-    thrusters[1][1] = 1;
-    thrusters[1][2] = remainder(ref_angle,90);
-    thrusters[2][1] = 1;
-    thrusters[2][2] = remainder(ref_angle,90);
-    thrusters[3][1] = 1;
-    thrusters[3][2] = 0;
-    thrusters[4][1] = 1;
-    thrusters[4][2] = 0;
-    return thrusters;
+    float thrusters[4] = {1,1,1,1};
+    float angle[4] = {remainder(ref_angle,90),remainder(ref_angle,90),0,0};
+    float* arr[2] = {thrusters, angle};
+    // thrusters[1][1] = 1;
+    // //thrusters[1][2] = remainder(ref_angle,90);
+    // thrusters[2][1] = 1;
+    // //thrusters[2][2] = remainder(ref_angle,90);
+    // thrusters[3][1] = 1;
+    // //thrusters[3][2] = 0;
+    // thrusters[4][1] = 1;
+    // //thrusters[4][2] = 0;
+    return arr;
 }
 
 

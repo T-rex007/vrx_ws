@@ -15,10 +15,10 @@ public:
     ~WAMV();
 
     ///@brief Update wamv location (x, y) and heading (in degrees)
-    void UpdateLocal(float local[2], float theta);
+    void UpdateLocal(double longitude, double latitude, float theta);
 
     ///@brief Update the goal position (x, y)
-    void UpdateGoal(float aim[2]);
+    void UpdateGoal(double longitude, double latitude);
 
     ///@brief Returns the trajectory of the target
     float ReturnAngle();
@@ -27,14 +27,14 @@ public:
     float CalcAngle(float ref_angle);
 
     ///@brief Turns the boat
-    float TurnBoat(float ref_angle);
+    float** TurnBoat(float ref_angle);
 
     ///@brief Update the target vector and reference angle to goal
     void UpdateAngle();
 
 private:
     ros::NodeHandle node; // ROS node handler
-    float location[2];   //x and y pos of robot center
+    double location[2];   //x and y pos of robot center
     float heading;    //heading of front of the robot 
     float goal[2];  //location of goal position
     float target_vector[2];     //vector from current location to the goal

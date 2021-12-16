@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <std_msgs/Float32.h>
+#include <sensor_msgs/NavSatFix.h>
 #include "navigation/wamv.h"
 #include "controllers/pid.h"
 
@@ -10,14 +11,14 @@
 WAMV boat;
 PID controller;
 
-void GPSCallback(const std::msgs::Float::ConstPtr& msg)
+void GPSCallback(const sensor_msgs::NavSatFix msg)
 {
-    boat.UpdateLocal(msg.longitude, msg.latitude)
+    boat.UpdateLocal(msg.longitude, msg.latitude);
 }
 
-void GoalCallback(const std::msgs::Float::ConstPtr& msg)
+void GoalCallback(const sensor_msgs::NavSatFix msg)
 {
-    boat.UpdateGoal(msg.longitude, msg.latitude)
+    boat.UpdateGoal(msg.longitude, msg.latitude);
 }
 
 int main(int argc, char **argv)
@@ -44,20 +45,20 @@ int main(int argc, char **argv)
 
     
     controller.SetGains(1,1,1);
-    while ros.ok()
+    while (ros::ok())
     {
         
         calculated = controller.Compute(boat.ReturnAngle());
         difference = boat.CalcAngle(calculated);
         thrusters = boat.TurnBoat(difference);
-        left_front_cmd.published(thrusters[1][1]);
-        left_front_angle.published(thrusters[1][2]);
-        right_front_cmd.published(thrusters[2][1]);
-        right_front_angle.published(thrusters[2][2]);
-        left_rear_cmd.published(thrusters[3][1]);
-        left_rear_angle.published(thrusters[3][2]);
-        right_rear_cmd.published(thrusters[4][1]);
-        right_rear_angle.published(thrusters[4][2]);
+        left_front_cmd.publish(thrusters[1][1]);
+        left_front_angle.publish(thrusters[1][2]);
+        right_front_cmd.publish(thrusters[2][1]);
+        right_front_angle.publish(thrusters[2][2]);
+        left_rear_cmd.publish(thrusters[3][1]);
+        left_rear_angle.publish(thrusters[3][2]);
+        right_rear_cmd.publish(thrusters[4][1]);
+        right_rear_angle.publish(thrusters[4][2]);
 
         loop_rate.sleep();
     }
