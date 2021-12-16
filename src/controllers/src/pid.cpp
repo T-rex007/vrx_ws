@@ -19,7 +19,6 @@ float PID::Compute(float input)
     ros::Time now;
     double difference;
     double error_p;
-    double error_i;
     double error_d;
     float output;
 

@@ -1,8 +1,11 @@
 #include <ros/ros.h>
+#include <std_msgs/Float32.h>
 #include "navigation/wamv.h"
 #include "controllers/pid.h"
 
+
 #define SAMPLE 100
+#define QUEUE 50
 
 WAMV boat;
 PID controller;
@@ -24,9 +27,16 @@ int main(int argc, char **argv)
 
     // Main access point to communications with the ROS system
     ros::NodeHandle n;
-    ros::Subscriber gps = n.subscribe("/wamv/sensors/gps/gps/fix", 100, GPSCallback);
-    ros::Subscriber goal = n.subscribe("/wamv/goal", 100, GoalCallback);
-    ros::Publicher front_left = n.
+    ros::Subscriber gps = n.subscribe("/wamv/sensors/gps/gps/fix", QUEUE, GPSCallback);
+    ros::Subscriber goal = n.subscribe("/wamv/goal", QUEUE, GoalCallback);
+    ros::Publisher left_front_cmd = n.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_cmd", QUEUE);
+    ros::Publisher left_front_angle = n.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_angle", QUEUE);
+    ros::Publisher right_front_cmd = n.advertise<std_msgs::Float32>("/wamv/thrusters/right_front_thrust_cmd", QUEUE);
+    ros::Publisher right_front_angle = n.advertise<std_msgs::Float32>("/wamv/thrusters/right_front_thrust_angle", QUEUE);
+    ros::Publisher left_rear_cmd = n.advertise<std_msgs::Float32>("/wamv/thrusters/left_rear_thrust_cmd", QUEUE);
+    ros::Publisher left_rear_angle = n.advertise<std_msgs::Float32>("/wamv/thrusters/left_rear_thrust_angle", QUEUE);
+    ros::Publisher right_rear_cmd = n.advertise<std_msgs::Float32>("/wamv/thrusters/right_rear_thrust_cmd", QUEUE);
+    ros::Publisher right_rear_angle = n.advertise<std_msgs::Float32>("/wamv/thrusters/right_rear_thrust_angle", QUEUE);
 
     
 
