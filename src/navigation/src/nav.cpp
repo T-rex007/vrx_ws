@@ -5,7 +5,7 @@
 #include "controllers/pid.h"
 
 
-#define SAMPLE 100
+#define SAMPLE 10
 #define QUEUE 50
 
 WAMV boat;
