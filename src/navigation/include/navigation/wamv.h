@@ -37,7 +37,7 @@ public:
     float CalcAngle(float ref_angle);
 
     ///@brief Turns the boat
-    std::array<std::tuple<float, float>, 4> TurnBoat(float ref_angle);
+    std::array<std::tuple<float, float>, 4> TurnBoat();
 
     ///@brief Update the target vector and reference angle to goal
     void UpdateAngle();
@@ -50,9 +50,11 @@ public:
 
     std::array<std::tuple<float, float>, 4> Thrust_Converter(float O_x, float O_y, float O_a, float init, float ratio = 0.5);
 
-    float* ReturnTargetVector();
+    double* ReturnTargetVector();
 
     double* ReturnGoal();
+
+    double* ReturnLocation();
 
     void GPSCallback(const sensor_msgs::NavSatFix msg);
 
@@ -66,7 +68,7 @@ private:
     double location[2];   //x and y pos of robot center
     float heading;    //heading of front of the robot 
     double goal[3];  //location of goal position
-    float target_vector[2];     //vector from current location to the goal
+    double target_vector[2];     //vector from current location to the goal
     float angle;       //angle between heading and goal distance
     ros::Subscriber gps;
     ros::Subscriber imu;

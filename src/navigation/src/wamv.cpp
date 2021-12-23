@@ -6,7 +6,7 @@ WAMV::WAMV(ros::NodeHandle *node_handle)
 {
     gps = node.subscribe("/wamv/sensors/gps/gps/fix", QUEUE, &WAMV::GPSCallback, this);
     imu = node.subscribe("/wamv/sensors/imu/imu/data", QUEUE, &WAMV::IMUCallback, this);
-    goal_node = node.subscribe("/wrx/station_keeping/goal", QUEUE, &WAMV::GoalCallback, this);
+    goal_node = node.subscribe("/vrx/station_keeping/goal", QUEUE, &WAMV::GoalCallback, this);
 
     // left_front_cmd = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_cmd", QUEUE);
     // left_front_angle = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_angle", QUEUE);
@@ -33,15 +33,6 @@ WAMV::~WAMV()
     return;
 }
 
-///@brief Update wamv location (x, y) and heading (in degrees)
-void WAMV::UpdateLocal(double longitude, double latitude, float theta)
-{
-    location[0] = longitude;
-    location[1] = latitude;   //consider using array of len 3
-    heading = theta;
-
-    UpdateAngle();
-}
 
 ///@brief Update the goal position (x, y)
 void WAMV::UpdateGoal(double longitude, double latitude)
@@ -72,11 +63,11 @@ float WAMV::CalcAngle(float ref_angle)
 }
 
 ///@brief Turns the boat
-std::array<std::tuple<float, float>, 4> WAMV::TurnBoat(float ref_angle)
+std::array<std::tuple<float, float>, 4> WAMV::TurnBoat()
 {
     std::array<std::tuple<float, float>, 4> thrusters;
-    float cmd[4] = {0.1,0.1,0.1,0.1};
-    float thruster_angle[4] = {remainderf(ref_angle,90), remainderf(ref_angle,90),0,0};
+    float cmd[4] = {0,0.25,0.5,0.75};
+    float thruster_angle[4] = {-45,45,45,-45};
     for (int i = 0; i < 4; i++)
     {
         thrusters[i] = std::make_tuple(cmd[i], thruster_angle[i]);
@@ -89,7 +80,7 @@ std::array<std::tuple<float, float>, 4> WAMV::TurnBoat(float ref_angle)
 ///@brief Update the target vector and reference angle to goal
 void WAMV::UpdateAngle()
 {
-    float target[2];
+    double target[2];
     float ref_angle;
     float distance;
 
@@ -162,11 +153,12 @@ std::array<std::tuple<float, float>, 4> WAMV::Thrust_Converter(float O_x, float 
     float scalar;
     float a = 0.5;
 
-    scalar = distance / (distance +a);
-
+    // scalar = distance / (distance +a);
+    scalar = 1;
     for(int i = 0; i < 4; i++)
     {
-        cmd[i] = (cmd[i]/(O_x + O_y)) * scalar;
+        // cmd[i] = (cmd[i]/(abs(O_x) + abs(O_y))) * scalar;
+        cmd[i] = (cmd[i]/100) * scalar;
     }
     float temp = (tan((O_a * M_PI) / 360)) / 4;
     // cmd[0] = (pow(distance, 2)/init) * cmd[0]; // Incorporate Ratio
@@ -191,7 +183,7 @@ std::array<std::tuple<float, float>, 4> WAMV::Thrust_Converter(float O_x, float 
     return thrusters;
 }
 
-float* WAMV::ReturnTargetVector()
+double* WAMV::ReturnTargetVector()
 {
     return target_vector;
 }
@@ -201,10 +193,15 @@ double* WAMV::ReturnGoal()
     return goal;
 }
 
+double* WAMV::ReturnLocation()
+{
+    return location;
+}
+
 void WAMV::GPSCallback(const sensor_msgs::NavSatFix msg)
 {
     location[0] = msg.longitude;
-    location[1] = msg.longitude;
+    location[1] = msg.latitude;
     UpdateAngle();
 } 
 
@@ -216,7 +213,7 @@ void WAMV::IMUCallback(const sensor_msgs::Imu msg)
 void WAMV::GoalCallback(const geographic_msgs::GeoPoseStamped msg)
 {
     goal[0] = msg.pose.position.longitude;
-    goal[1] = msg.pose.position.longitude;
+    goal[1] = msg.pose.position.latitude;
     goal[2] = ConvertOrientation(msg.pose.orientation);
     UpdateAngle();
 }
