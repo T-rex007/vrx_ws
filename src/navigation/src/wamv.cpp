@@ -97,7 +97,7 @@ void WAMV::UpdateAngle()
     target[1] = goal[1] - location[1];
     distance = sqrt(pow(target[0], 2) + (target[1], 2));
 
-    ref_angle = asin(target_vector[0]/distance);  //angle between euclidean distance vector and north reference in radians
+    ref_angle = asin(target[0]/distance);  //angle between euclidean distance vector and north reference in radians
     ref_angle = (ref_angle/M_PI) * 180;     //put in degrees
     
     if(target[1] > 0)
