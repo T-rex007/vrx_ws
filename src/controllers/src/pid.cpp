@@ -4,6 +4,7 @@
 PID::PID(ros::NodeHandle *node_handle)
     : node(*node_handle)
 {
+    setpoint = 0;
     return;
 }
 

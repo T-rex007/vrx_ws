@@ -76,10 +76,10 @@ std::array<std::tuple<float, float>, 4> WAMV::TurnBoat(float ref_angle)
 {
     std::array<std::tuple<float, float>, 4> thrusters;
     float cmd[4] = {0.1,0.1,0.1,0.1};
-    float angle[4] = {remainderf(ref_angle,90), remainderf(ref_angle,90),0,0};
+    float thruster_angle[4] = {remainderf(ref_angle,90), remainderf(ref_angle,90),0,0};
     for (int i = 0; i < 4; i++)
     {
-        thrusters[i] = std::make_tuple(cmd[i], angle[i]);
+        thrusters[i] = std::make_tuple(cmd[i], thruster_angle[i]);
     }
 
     return thrusters;
@@ -113,12 +113,14 @@ void WAMV::UpdateAngle()
 void WAMV::UpdateThruster(std::array<std::tuple<float, float>, 4> thrusters)
 {
     std_msgs::Float32 msg;
+    float temp;
 
     for(int i = 0; i < 4; i++)
     {
         msg.data = std::get<0>(thrusters[i]);
         thrusters_pub[i * 2].publish(msg);
-        msg.data = std::get<1>(thrusters[i]);
+        temp = std::get<1>(thrusters[i]);
+        msg.data = (temp / 180) * M_PI;
         thrusters_pub[(i * 2) + 1].publish(msg);
     }
 }
@@ -137,6 +139,66 @@ double WAMV::ConvertOrientation(geometry_msgs::Quaternion quat)
         yaw += 360.0;
     }
     return yaw;
+}
+
+void WAMV::Minor_Control()
+{
+    float thruster_angles[4] = {-45,45,45,-45};
+    float cmd[4] = {0,0,0,0};
+    std::array<std::tuple<float, float>, 4> thrusters;
+    for (int i = 0; i < 4; i++)
+    {
+        thrusters[i] = std::make_tuple(cmd[i], thruster_angles[i]);
+    }
+    UpdateThruster(thrusters);
+}
+
+std::array<std::tuple<float, float>, 4> WAMV::Thrust_Converter(float O_x, float O_y, float O_a,  float init, float ratio)
+{
+    float cmd[4] = {O_x + O_y,-O_x + O_y,-O_x + O_y,O_x + O_y};
+    float thruster_angles[4] = {-45,45,45,-45};
+    std::array<std::tuple<float, float>, 4> thrusters;
+    float distance = sqrt(pow(target_vector[0], 2) + (target_vector[1] , 2));
+    float scalar;
+    float a = 0.5;
+
+    scalar = distance / (distance +a);
+
+    for(int i = 0; i < 4; i++)
+    {
+        cmd[i] = (cmd[i]/(O_x + O_y)) * scalar;
+    }
+    float temp = (tan((O_a * M_PI) / 360)) / 4;
+    // cmd[0] = (pow(distance, 2)/init) * cmd[0]; // Incorporate Ratio
+    // cmd[1] = (pow(distance, 2)/init) * cmd[1];
+    // cmd[2] = (pow(distance, 2)/init) * cmd[2];
+    // cmd[3] = (pow(distance, 2)/init) * cmd[3];
+
+    for(int i = 0; i < 4; i++)
+    {
+        if(temp < abs(cmd[i]))
+        {
+            temp = abs(cmd[i]);
+        }
+    }
+
+    for(int i = 0; i<4; i++)
+    {
+        // cmd[i] = cmd[i] / abs(temp);
+        thrusters[i] = std::make_tuple(cmd[i], thruster_angles[i]);
+    }
+
+    return thrusters;
+}
+
+float* WAMV::ReturnTargetVector()
+{
+    return target_vector;
+}
+
+double* WAMV::ReturnGoal()
+{
+    return goal;
 }
 
 void WAMV::GPSCallback(const sensor_msgs::NavSatFix msg)
@@ -158,4 +220,6 @@ void WAMV::GoalCallback(const geographic_msgs::GeoPoseStamped msg)
     goal[2] = ConvertOrientation(msg.pose.orientation);
     UpdateAngle();
 }
+
+
 
