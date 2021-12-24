@@ -37,7 +37,7 @@ public:
     float CalcAngle(float ref_angle);
 
     ///@brief Turns the boat
-    std::array<std::tuple<float, float>, 4> TurnBoat();
+    std::array<std::tuple<float, float>, 4> MajorControl(float ref);
 
     ///@brief Update the target vector and reference angle to goal
     void UpdateAngle();
@@ -46,9 +46,7 @@ public:
 
     double ConvertOrientation(geometry_msgs::Quaternion quat);
 
-    void Minor_Control();
-
-    std::array<std::tuple<float, float>, 4> Thrust_Converter(float O_x, float O_y, float O_a, float init, float ratio = 0.5);
+    std::array<std::tuple<float, float>, 4> MiniControl(float x, float y, float O_a, float a, float ratio = 0.5);
 
     double* ReturnTargetVector();
 
@@ -73,14 +71,6 @@ private:
     ros::Subscriber gps;
     ros::Subscriber imu;
     ros::Subscriber goal_node;
-    // ros::Publisher left_front_cmd;
-    // ros::Publisher left_front_angle;
-    // ros::Publisher right_front_cmd;
-    // ros::Publisher right_front_angle;
-    // ros::Publisher left_rear_cmd;
-    // ros::Publisher left_rear_angle;
-    // ros::Publisher right_rear_cmd;
-    // ros::Publisher right_rear_angle;
     ros::Publisher thrusters_pub[8];
 
 };

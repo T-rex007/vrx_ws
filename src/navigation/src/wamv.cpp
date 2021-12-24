@@ -8,15 +8,6 @@ WAMV::WAMV(ros::NodeHandle *node_handle)
     imu = node.subscribe("/wamv/sensors/imu/imu/data", QUEUE, &WAMV::IMUCallback, this);
     goal_node = node.subscribe("/vrx/station_keeping/goal", QUEUE, &WAMV::GoalCallback, this);
 
-    // left_front_cmd = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_cmd", QUEUE);
-    // left_front_angle = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_angle", QUEUE);
-    // right_front_cmd = node.advertise<std_msgs::Float32>("/wamv/thrusters/right_front_thrust_cmd", QUEUE);
-    // right_front_angle = node.advertise<std_msgs::Float32>("/wamv/thrusters/right_front_thrust_angle", QUEUE);
-    // left_rear_cmd = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_rear_thrust_cmd", QUEUE);
-    // left_rear_angle = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_rear_thrust_angle", QUEUE);
-    // right_rear_cmd = node.advertise<std_msgs::Float32>("/wamv/thrusters/right_rear_thrust_cmd", QUEUE);
-    // right_rear_angle = node.advertise<std_msgs::Float32>("/wamv/thrusters/right_rear_thrust_angle", QUEUE);
-
     thrusters_pub[0] = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_cmd", QUEUE);
     thrusters_pub[1] = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_angle", QUEUE);
     thrusters_pub[2] = node.advertise<std_msgs::Float32>("/wamv/thrusters/right_front_thrust_cmd", QUEUE);
@@ -63,7 +54,7 @@ float WAMV::CalcAngle(float ref_angle)
 }
 
 ///@brief Turns the boat
-std::array<std::tuple<float, float>, 4> WAMV::TurnBoat()
+std::array<std::tuple<float, float>, 4> WAMV::MajorControl(float ref)
 {
     std::array<std::tuple<float, float>, 4> thrusters;
     float cmd[4] = {0,0.25,0.5,0.75};
@@ -84,8 +75,8 @@ void WAMV::UpdateAngle()
     float ref_angle;
     float distance;
 
-    target[0] = (goal[0] - location[0])*6371000*M_PI/180;
-    target[1] = (goal[1] - location[1])*6371000*M_PI/180;
+    target[0] = (location[0] - goal[0])*6371000*M_PI/180;
+    target[1] = (location[1] - goal[1])*6371000*M_PI/180;
     distance = sqrt(pow(target[0], 2) + (target[1], 2));
 
     ref_angle = asin(target[0]/distance);  //angle between euclidean distance vector and north reference in radians
@@ -132,46 +123,56 @@ double WAMV::ConvertOrientation(geometry_msgs::Quaternion quat)
     return yaw;
 }
 
-void WAMV::Minor_Control()
+std::array<std::tuple<float, float>, 4> WAMV::MiniControl(float x, float y, float O_a, float a, float ratio)
 {
-    float thruster_angles[4] = {-45,45,45,-45};
-    float cmd[4] = {0,0,0,0};
     std::array<std::tuple<float, float>, 4> thrusters;
-    for (int i = 0; i < 4; i++)
-    {
-        thrusters[i] = std::make_tuple(cmd[i], thruster_angles[i]);
-    }
-    UpdateThruster(thrusters);
-}
+    float scalx;
+    float scaly;
+    float O_x;
+    float O_y;
 
-std::array<std::tuple<float, float>, 4> WAMV::Thrust_Converter(float O_x, float O_y, float O_a,  float a, float ratio)
-{
+    // float x = log*6371000*M_PI/180;
+    // float y = lat*6371000*M_PI/180;
+    ROS_INFO("compute");
+    ROS_INFO(std::to_string(x).c_str());
+    ROS_INFO(std::to_string(y).c_str());
+    scalx = abs(x)/(abs(x) + a);
+    scaly = abs(y)/(abs(y) + a);
+    // scalx = 1;
+    // scaly = 1;
+    O_x = scalx * x;
+    O_y = scaly * y;
+    ROS_INFO(std::to_string(O_x).c_str());
+    ROS_INFO(std::to_string(O_y).c_str());
+
     float cmd[4] = {O_x + O_y,-O_x + O_y,-O_x + O_y,O_x + O_y};
     float thruster_angles[4] = {-45,45,45,-45};
-    std::array<std::tuple<float, float>, 4> thrusters;
+
     float distance = sqrt(pow(target_vector[0], 2) + (target_vector[1] , 2));
+    ROS_INFO(std::to_string(distance).c_str());
     float scalar;
 
     scalar = distance / (distance +a);
+    // scalar = 1;
 
     for(int i = 0; i < 4; i++)
     {
         // cmd[i] = (cmd[i]/(abs(O_x) + abs(O_y))) * scalar;
         cmd[i] = (cmd[i]/(abs(O_x) + abs(O_y))) * scalar;
     }
-    float temp = (tan((O_a * M_PI) / 360)) / 4;
+    // float temp = (tan((O_a * M_PI) / 360)) / 4;
     // cmd[0] = (pow(distance, 2)/init) * cmd[0]; // Incorporate Ratio
     // cmd[1] = (pow(distance, 2)/init) * cmd[1];
     // cmd[2] = (pow(distance, 2)/init) * cmd[2];
     // cmd[3] = (pow(distance, 2)/init) * cmd[3];
 
-    for(int i = 0; i < 4; i++)
-    {
-        if(temp < abs(cmd[i]))
-        {
-            temp = abs(cmd[i]);
-        }
-    }
+    // for(int i = 0; i < 4; i++)
+    // {
+    //     if(temp < abs(cmd[i]))
+    //     {
+    //         temp = abs(cmd[i]);
+    //     }
+    // }
 
     for(int i = 0; i<4; i++)
     {
