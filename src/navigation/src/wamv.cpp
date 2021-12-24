@@ -84,8 +84,8 @@ void WAMV::UpdateAngle()
     float ref_angle;
     float distance;
 
-    target[0] = goal[0] - location[0];
-    target[1] = goal[1] - location[1];
+    target[0] = (goal[0] - location[0])*6371000*M_PI/180;
+    target[1] = (goal[1] - location[1])*6371000*M_PI/180;
     distance = sqrt(pow(target[0], 2) + (target[1], 2));
 
     ref_angle = asin(target[0]/distance);  //angle between euclidean distance vector and north reference in radians
@@ -144,21 +144,20 @@ void WAMV::Minor_Control()
     UpdateThruster(thrusters);
 }
 
-std::array<std::tuple<float, float>, 4> WAMV::Thrust_Converter(float O_x, float O_y, float O_a,  float init, float ratio)
+std::array<std::tuple<float, float>, 4> WAMV::Thrust_Converter(float O_x, float O_y, float O_a,  float a, float ratio)
 {
     float cmd[4] = {O_x + O_y,-O_x + O_y,-O_x + O_y,O_x + O_y};
     float thruster_angles[4] = {-45,45,45,-45};
     std::array<std::tuple<float, float>, 4> thrusters;
     float distance = sqrt(pow(target_vector[0], 2) + (target_vector[1] , 2));
     float scalar;
-    float a = 0.5;
 
-    // scalar = distance / (distance +a);
-    scalar = 1;
+    scalar = distance / (distance +a);
+
     for(int i = 0; i < 4; i++)
     {
         // cmd[i] = (cmd[i]/(abs(O_x) + abs(O_y))) * scalar;
-        cmd[i] = (cmd[i]/100) * scalar;
+        cmd[i] = (cmd[i]/(abs(O_x) + abs(O_y))) * scalar;
     }
     float temp = (tan((O_a * M_PI) / 360)) / 4;
     // cmd[0] = (pow(distance, 2)/init) * cmd[0]; // Incorporate Ratio

@@ -67,12 +67,12 @@ int main(int argc, char **argv)
     {
         distance = sqrt(pow(target_vector[0],2)+pow(target_vector[1],2));
         ROS_INFO("start");
-        ROS_INFO(std::to_string(goal[0]).c_str());
-        ROS_INFO(std::to_string(goal[1]).c_str());
-        ROS_INFO(std::to_string(location[0]).c_str());
-        ROS_INFO(std::to_string(location[1]).c_str());
-        ROS_INFO(std::to_string(target_vector[0]).c_str());
-        ROS_INFO(std::to_string(target_vector[1]).c_str());
+        // ROS_INFO(std::to_string(goal[0]).c_str());
+        // ROS_INFO(std::to_string(goal[1]).c_str());
+        // ROS_INFO(std::to_string(location[0]).c_str());
+        // ROS_INFO(std::to_string(location[1]).c_str());
+        // ROS_INFO(std::to_string(target_vector[0]).c_str());
+        // ROS_INFO(std::to_string(target_vector[1]).c_str());
         ROS_INFO(std::to_string(distance).c_str());
         // target_vector = boat.ReturnTargetVector();
         // horizontal.SetRef(target_vector[0]);
@@ -80,12 +80,12 @@ int main(int argc, char **argv)
         // O_x = horizontal.Compute(target_vector[0]);
         // O_y = vertical.Compute(target_vector[1]);
         // O_a = angle.Compute(boat.ReturnAngle());
-        // O_a - boat.ReturnAngle();
-        // O_x = distance;
-        // O_y = 0;
-        // thrusters = boat.Thrust_Converter(O_x, O_y, O_a, distance);
-        // boat.UpdateThruster(thrusters);
-        // loop_rate.sleep();
+        O_a - boat.ReturnAngle();
+        O_x = target_vector[0];
+        O_y = target_vector[1];
+        thrusters = boat.Thrust_Converter(O_x, O_y, O_a, 4);
+        boat.UpdateThruster(thrusters);
+        loop_rate.sleep();
         
     }
 
