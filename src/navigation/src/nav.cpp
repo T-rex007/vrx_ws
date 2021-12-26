@@ -2,9 +2,11 @@
 #include "navigation/wamv.h"
 #include "controllers/pid.h"
 #include "vrx_gazebo/Task.h"
+#include "geographic_msgs/GeoPath.h"
 
 
 #define SAMPLE 100
+#define SENSITIVITY 1
 
 bool ready_flag = false;
 
@@ -16,6 +18,21 @@ void TaskCallback(vrx_gazebo::Task msg)
         ready_flag = true;
 
     }
+}
+
+void SortArray()    //may make global goal array maybe
+{
+
+}
+
+void Goalreach()
+{
+    SortArray();    //sort array to make sure shortest path after goal removed
+}
+
+void WaypointCallback(geographic_msgs::GeoPath msg)
+{
+    // read data into multidimentional vector or array
 }
 
 int main(int argc, char **argv)
@@ -32,6 +49,7 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(SAMPLE);
 
     ros::Subscriber state = n.subscribe("/vrx/task/info", QUEUE, TaskCallback);
+    ros::Subscriber waypoints = n.subscribe("/vrx/wayfinding/waypoints", QUEUE, WaypointCallback);
 
     WAMV boat(&n);
     PID horizontal(&n);
@@ -71,6 +89,7 @@ int main(int argc, char **argv)
     while (ros::ok())
     {
         distance = sqrt(pow(target_vector[0],2)+pow(target_vector[1],2));
+
         calculated = boat.CalcAngle(boat.ReturnAngle());    //consider using raw target angle instead of difference
 
         if(distance > 20)
@@ -78,7 +97,7 @@ int main(int argc, char **argv)
             //consider reseting minor control values in pid here
             O_a = major.Compute(calculated);
             thrusters = boat.MajorControl(O_a, 45);
-        }else
+        }else if(distance > SENSITIVITY)
         {
             //consider reseting major control pid values here
             O_x = horizontal.Compute(target_vector[0]);
@@ -87,6 +106,8 @@ int main(int argc, char **argv)
             // O_x = target_vector[0];
             // O_y = target_vector[1];
             thrusters = boat.MiniControl(O_x, O_y, O_a, 3.5); 
+        }else{
+            Goalreach();
         }
 
         boat.UpdateThruster(thrusters);
