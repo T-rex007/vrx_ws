@@ -37,7 +37,7 @@ int main(int argc, char **argv)
     PID horizontal(&n);
     PID vertical(&n);
     PID angle(&n);
-    PID major(&n)
+    PID major(&n);
 
     double *goal = boat.ReturnGoal();
     double *target_vector = boat.ReturnTargetVector();
@@ -72,17 +72,18 @@ int main(int argc, char **argv)
     {
         distance = sqrt(pow(target_vector[0],2)+pow(target_vector[1],2));
         calculated = boat.CalcAngle(boat.ReturnAngle());    //consider using raw target angle instead of difference
-        O_a = major.Calculate(calculated);
 
         if(distance > 20)
         {
             //consider reseting minor control values in pid here
-            thrusters = boat.MajorControl(O_a);
+            O_a = major.Compute(calculated);
+            thrusters = boat.MajorControl(O_a, 45);
         }else
         {
             //consider reseting major control pid values here
             O_x = horizontal.Compute(target_vector[0]);
             O_y = vertical.Compute(target_vector[1]);
+            O_a = angle.Compute(calculated);
             // O_x = target_vector[0];
             // O_y = target_vector[1];
             thrusters = boat.MiniControl(O_x, O_y, O_a, 3.5); 

@@ -37,7 +37,7 @@ public:
     float CalcAngle(float ref_angle);
 
     ///@brief Turns the boat
-    std::array<std::tuple<float, float>, 4> MajorControl(float ref);
+    std::array<std::tuple<float, float>, 4> MajorControl(float ref, float range = 45);
 
     ///@brief Update the target vector and reference angle to goal
     void UpdateAngle();

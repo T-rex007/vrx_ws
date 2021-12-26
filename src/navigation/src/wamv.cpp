@@ -54,11 +54,23 @@ float WAMV::CalcAngle(float ref_angle)
 }
 
 ///@brief Turns the boat
-std::array<std::tuple<float, float>, 4> WAMV::MajorControl(float ref)
+std::array<std::tuple<float, float>, 4> WAMV::MajorControl(float ref, float range)
 {
     std::array<std::tuple<float, float>, 4> thrusters;
-    float cmd[4] = {0,0.25,0.5,0.75};
-    float thruster_angle[4] = {-45,45,45,-45};
+    float back;
+    float scale = abs(ref)/(abs(ref) + 64);
+    float angle = (180/(1+exp(-0.01 + ref))) - 90;
+
+    if(ref <= range)
+    {
+        back = 1;   //consider another decay here instead of if
+    }else{
+        back = 0;
+    }
+
+    float cmd[4] = {scale, scale, back, back};
+    float thruster_angle[4] = {angle, angle, 0, 0};
+
     for (int i = 0; i < 4; i++)
     {
         thrusters[i] = std::make_tuple(cmd[i], thruster_angle[i]);
@@ -133,23 +145,23 @@ std::array<std::tuple<float, float>, 4> WAMV::MiniControl(float x, float y, floa
 
     // float x = log*6371000*M_PI/180;
     // float y = lat*6371000*M_PI/180;
-    ROS_INFO("compute");
-    ROS_INFO(std::to_string(x).c_str());
-    ROS_INFO(std::to_string(y).c_str());
+    // ROS_INFO("compute");
+    // ROS_INFO(std::to_string(x).c_str());
+    // ROS_INFO(std::to_string(y).c_str());
     scalx = abs(x)/(abs(x) + a);
     scaly = abs(y)/(abs(y) + a);
     // scalx = 1;
     // scaly = 1;
     O_x = scalx * x;
     O_y = scaly * y;
-    ROS_INFO(std::to_string(O_x).c_str());
-    ROS_INFO(std::to_string(O_y).c_str());
+    // ROS_INFO(std::to_string(O_x).c_str());
+    // ROS_INFO(std::to_string(O_y).c_str());
 
     float cmd[4] = {O_x + O_y,-O_x + O_y,-O_x + O_y,O_x + O_y};
     float thruster_angles[4] = {-45,45,45,-45};
 
     float distance = sqrt(pow(target_vector[0], 2) + (target_vector[1] , 2));
-    ROS_INFO(std::to_string(distance).c_str());
+    // ROS_INFO(std::to_string(distance).c_str());
     float scalar;
 
     scalar = distance / (distance +a);
