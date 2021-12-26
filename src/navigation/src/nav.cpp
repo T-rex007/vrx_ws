@@ -36,7 +36,8 @@ int main(int argc, char **argv)
     WAMV boat(&n);
     PID horizontal(&n);
     PID vertical(&n);
-    PID angle (&n);
+    PID angle(&n);
+    PID major(&n)
 
     double *goal = boat.ReturnGoal();
     double *target_vector = boat.ReturnTargetVector();
@@ -54,38 +55,39 @@ int main(int argc, char **argv)
     horizontal.SetGains(1,0,0);
     vertical.SetGains(0.5,0,0);
     angle.SetGains(1,1,1);
+    major.SetGains(1,1,1);
 
     horizontal.SetRef(0);
     vertical.SetRef(0);
     angle.SetRef(goal[2]);
+    major.SetRef(0);
+    
 
     while(!ready_flag)
     {
-        // O_x = horizontal.Compute(target_vector[0]);
-        // O_y = vertical.Compute(target_vector[1]);
-        // O_a = angle.Compute(boat.ReturnAngle());
-        // loop_rate.sleep();
     }
     state.shutdown();
 
     while (ros::ok())
     {
-        // distance = sqrt(pow(target_vector[0],2)+pow(target_vector[1],2));
-        // ROS_INFO("start");
-        // ROS_INFO(std::to_string(goal[0]).c_str());
-        // ROS_INFO(std::to_string(goal[1]).c_str());
-        // ROS_INFO(std::to_string(location[0]).c_str());
-        // ROS_INFO(std::to_string(location[1]).c_str());
-        // ROS_INFO(std::to_string(target_vector[0]).c_str());
-        // ROS_INFO(std::to_string(target_vector[1]).c_str());
-        // ROS_INFO(std::to_string(distance).c_str());
-        // O_x = horizontal.Compute(target_vector[0]);
-        // O_y = vertical.Compute(target_vector[1]);
-        // O_a = angle.Compute(boat.ReturnAngle());
-        O_a - boat.ReturnAngle();
-        O_x = target_vector[0];
-        O_y = target_vector[1];
-        thrusters = boat.MiniControl(O_x, O_y, O_a, 3.5);
+        distance = sqrt(pow(target_vector[0],2)+pow(target_vector[1],2));
+        calculated = boat.CalcAngle(boat.ReturnAngle());    //consider using raw target angle instead of difference
+        O_a = major.Calculate(calculated);
+
+        if(distance > 20)
+        {
+            //consider reseting minor control values in pid here
+            thrusters = boat.MajorControl(O_a);
+        }else
+        {
+            //consider reseting major control pid values here
+            O_x = horizontal.Compute(target_vector[0]);
+            O_y = vertical.Compute(target_vector[1]);
+            // O_x = target_vector[0];
+            // O_y = target_vector[1];
+            thrusters = boat.MiniControl(O_x, O_y, O_a, 3.5); 
+        }
+
         boat.UpdateThruster(thrusters);
         loop_rate.sleep();
         

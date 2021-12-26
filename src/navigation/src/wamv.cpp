@@ -37,7 +37,7 @@ void WAMV::UpdateGoal(double longitude, double latitude)
 ///@brief Returns the trajectory of the target
 float WAMV::ReturnAngle()
 {
-   return angle;
+   return target_angle;
 }
 
 ///@brief Calculates the Angle the boat will turn
@@ -47,7 +47,7 @@ float WAMV::CalcAngle(float ref_angle)
     difference = ref_angle - heading;
     if (abs(difference) > 180)  //consider accounting for momentum in turning
     { 
-        difference = remainder((360 - difference), 360);
+        difference = (-difference/abs(difference)) * (360 - abs(difference));
 
     } 
    return difference;
@@ -89,7 +89,7 @@ void WAMV::UpdateAngle()
         ref_angle = -1 * ref_angle + 180;
 
     std::copy(target, target + 2, target_vector);
-    angle = ref_angle;
+    target_angle = ref_angle;
 }
 
 void WAMV::UpdateThruster(std::array<std::tuple<float, float>, 4> thrusters)

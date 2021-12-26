@@ -67,7 +67,7 @@ private:
     float heading;    //heading of front of the robot 
     double goal[3];  //location of goal position
     double target_vector[2];     //vector from current location to the goal
-    float angle;       //angle between heading and goal distance
+    float target_angle;       //angle between north and goal distance
     ros::Subscriber gps;
     ros::Subscriber imu;
     ros::Subscriber goal_node;
