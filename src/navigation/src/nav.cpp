@@ -51,6 +51,7 @@ int main(int argc, char **argv)
 
     float calculated;
     float difference;
+    float temp;
     std::array<std::tuple<float, float>, 4> thrusters;
 
     horizontal.SetGains(1,0,0);
@@ -71,8 +72,18 @@ int main(int argc, char **argv)
 
     while (ros::ok())
     {
+        target_vector = boat.ReturnTargetVector();
+        location = boat.ReturnLocation();
+        goal = boat.ReturnGoal();
         distance = sqrt(pow(target_vector[0],2)+pow(target_vector[1],2));
-        // ROS_INFO("%s", std::to_string(distance).c_str());
+        temp = boat.ReturnAngle();
+        // ROS_INFO("lx: %s", std::to_string(location[0]).c_str());
+        // ROS_INFO("ly: %s", std::to_string(location[1]).c_str());
+        // ROS_INFO("gx: %s", std::to_string(goal[0]).c_str());
+        // ROS_INFO("gy: %s", std::to_string(goal[1]).c_str());
+        ROS_INFO("head: %s", std::to_string(temp).c_str());
+        ROS_INFO("tx: %s", std::to_string(target_vector[0]).c_str());
+        ROS_INFO("ty: %s", std::to_string(target_vector[1]).c_str());
 
         calculated = boat.CalcAngle(boat.ReturnAngle());    //consider using raw target angle instead of difference
 

@@ -27,7 +27,7 @@ WAMV::~WAMV()
 ///@brief Returns the trajectory of the target
 float WAMV::ReturnAngle()
 {
-   return target_angle;
+   return heading;
 }
 
 ///@brief Calculates the Angle the boat will turn
@@ -106,13 +106,17 @@ void WAMV::UpdateAngle()
 {
     if(goals.size() <= 0){/*target_vector[0] = 0; target_vector[1] = 0; target_angle = 0;*/ return;}
 
+    double temp[2];
     double target[2];
     std::array<double, 3> goal = goals.front();
     float ref_angle;
     float distance;
-
-    target[0] = (location[0] - goal[0])*6371000*M_PI/180;
-    target[1] = (location[1] - goal[1])*6371000*M_PI/180;
+    temp[0] = (goal[0] - location[0])*6371000*M_PI/180;
+    temp[1] = (goal[1] - location[1])*6371000*M_PI/180;
+    target[1] = temp[0] * cos(M_PI*(heading/180)) + temp[1] * sin(M_PI*(heading/180));   //pray this works by assuming the rate of change should be small enough to always have diff < 90 or 180 maybe
+    target[0] = -temp[1] * cos(M_PI*(heading/180)) + temp[0] * sin(M_PI*(heading/180));
+    // target[0] = temp[0];
+    // target[1] = temp[1];
     distance = sqrt(pow(target[0], 2) + (target[1], 2));
 
     ref_angle = asin(target[0]/distance);  //angle between euclidean distance vector and north reference in radians
@@ -253,7 +257,8 @@ void WAMV::GPSCallback(const sensor_msgs::NavSatFix msg)
 
 void WAMV::IMUCallback(const sensor_msgs::Imu msg)
 {
-    heading = ConvertOrientation(msg.orientation);
+    heading  = ConvertOrientation(msg.orientation);
+    // ROS_INFO("head: %s", std::to_string(heading).c_str());
 }
 
 void WAMV::GoalCallback(const geographic_msgs::GeoPath msg)
@@ -273,6 +278,3 @@ void WAMV::GoalCallback(const geographic_msgs::GeoPath msg)
     }
     GetMatrix();
 }
-
-
-
