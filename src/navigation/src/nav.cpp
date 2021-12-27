@@ -2,7 +2,6 @@
 #include "navigation/wamv.h"
 #include "controllers/pid.h"
 #include "vrx_gazebo/Task.h"
-#include "geographic_msgs/GeoPath.h"
 
 
 #define SAMPLE 100
@@ -20,21 +19,6 @@ void TaskCallback(vrx_gazebo::Task msg)
     }
 }
 
-void SortArray()    //may make global goal array maybe
-{
-
-}
-
-void Goalreach()
-{
-    SortArray();    //sort array to make sure shortest path after goal removed
-}
-
-void WaypointCallback(geographic_msgs::GeoPath msg)
-{
-    // read data into multidimentional vector or array
-}
-
 int main(int argc, char **argv)
 {
     
@@ -49,7 +33,6 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(SAMPLE);
 
     ros::Subscriber state = n.subscribe("/vrx/task/info", QUEUE, TaskCallback);
-    ros::Subscriber waypoints = n.subscribe("/vrx/wayfinding/waypoints", QUEUE, WaypointCallback);
 
     WAMV boat(&n);
     PID horizontal(&n);
@@ -57,7 +40,7 @@ int main(int argc, char **argv)
     PID angle(&n);
     PID major(&n);
 
-    double *goal = boat.ReturnGoal();
+    std::array<double, 3> goal = boat.ReturnGoal();
     double *target_vector = boat.ReturnTargetVector();
     double *location = boat.ReturnLocation();
     double distance;
@@ -89,10 +72,11 @@ int main(int argc, char **argv)
     while (ros::ok())
     {
         distance = sqrt(pow(target_vector[0],2)+pow(target_vector[1],2));
+        // ROS_INFO("%s", std::to_string(distance).c_str());
 
         calculated = boat.CalcAngle(boat.ReturnAngle());    //consider using raw target angle instead of difference
 
-        if(distance > 20)
+        if(distance > 99999)
         {
             //consider reseting minor control values in pid here
             O_a = major.Compute(calculated);
@@ -100,14 +84,14 @@ int main(int argc, char **argv)
         }else if(distance > SENSITIVITY)
         {
             //consider reseting major control pid values here
-            O_x = horizontal.Compute(target_vector[0]);
-            O_y = vertical.Compute(target_vector[1]);
+            // O_x = horizontal.Compute(target_vector[0]);
+            // O_y = vertical.Compute(target_vector[1]);
             O_a = angle.Compute(calculated);
-            // O_x = target_vector[0];
-            // O_y = target_vector[1];
+            O_x = target_vector[0];
+            O_y = target_vector[1];
             thrusters = boat.MiniControl(O_x, O_y, O_a, 3.5); 
         }else{
-            Goalreach();
+            boat.GoalReached();
         }
 
         boat.UpdateThruster(thrusters);

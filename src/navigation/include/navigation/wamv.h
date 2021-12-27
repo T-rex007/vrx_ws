@@ -5,9 +5,9 @@
 #include <std_msgs/Float32.h>
 #include <sensor_msgs/NavSatFix.h>
 #include <sensor_msgs/Imu.h>
+#include <geographic_msgs/GeoPath.h>
 #include <geometry_msgs/Quaternion.h>
 #include <tf/transform_datatypes.h>
-#include <geographic_msgs/GeoPoseStamped.h>
 #include <tuple>
 #include <array>
 #include <math.h>
@@ -24,12 +24,6 @@ public:
     /// @brief Destructor for the WAMV
     ~WAMV();
 
-    ///@brief Update wamv location (x, y) and heading (in degrees)
-    void UpdateLocal(double longitude, double latitude, float theta);
-
-    ///@brief Update the goal position (x, y)
-    void UpdateGoal(double longitude, double latitude);
-
     ///@brief Returns the trajectory of the target
     float ReturnAngle();
 
@@ -42,6 +36,10 @@ public:
     ///@brief Update the target vector and reference angle to goal
     void UpdateAngle();
 
+    void GetMatrix();
+
+    void GoalReached();
+
     void UpdateThruster(std::array<std::tuple<float, float>, 4> thrusters);
 
     double ConvertOrientation(geometry_msgs::Quaternion quat);
@@ -50,7 +48,7 @@ public:
 
     double* ReturnTargetVector();
 
-    double* ReturnGoal();
+    std::array<double, 3> ReturnGoal();
 
     double* ReturnLocation();
 
@@ -58,14 +56,14 @@ public:
 
     void IMUCallback(const sensor_msgs::Imu msg);
 
-    void GoalCallback(const geographic_msgs::GeoPoseStamped msg);
+    void GoalCallback(const geographic_msgs::GeoPath msg);
 
 
 private:
     ros::NodeHandle node; // ROS node handler
     double location[2];   //x and y pos of robot center
     float heading;    //heading of front of the robot 
-    double goal[3];  //location of goal position
+    std::vector<std::array<double, 3>> goals;  //location of goal positions
     double target_vector[2];     //vector from current location to the goal
     float target_angle;       //angle between north and goal distance
     ros::Subscriber gps;

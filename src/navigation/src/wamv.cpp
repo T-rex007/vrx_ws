@@ -4,9 +4,9 @@
 WAMV::WAMV(ros::NodeHandle *node_handle)
     : node(*node_handle)
 {
+    goal_node = node.subscribe("/vrx/wayfinding/waypoints", QUEUE, &WAMV::GoalCallback, this);
     gps = node.subscribe("/wamv/sensors/gps/gps/fix", QUEUE, &WAMV::GPSCallback, this);
     imu = node.subscribe("/wamv/sensors/imu/imu/data", QUEUE, &WAMV::IMUCallback, this);
-    goal_node = node.subscribe("/vrx/station_keeping/goal", QUEUE, &WAMV::GoalCallback, this);
 
     thrusters_pub[0] = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_cmd", QUEUE);
     thrusters_pub[1] = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_angle", QUEUE);
@@ -22,16 +22,6 @@ WAMV::WAMV(ros::NodeHandle *node_handle)
 WAMV::~WAMV()
 {
     return;
-}
-
-
-///@brief Update the goal position (x, y)
-void WAMV::UpdateGoal(double longitude, double latitude)
-{
-    goal[0] = longitude;
-    goal[1] = latitude;  //find how to automate finding the end of array
-
-    UpdateAngle();
 }
 
 ///@brief Returns the trajectory of the target
@@ -58,7 +48,7 @@ std::array<std::tuple<float, float>, 4> WAMV::MajorControl(float ref, float rang
 {
     std::array<std::tuple<float, float>, 4> thrusters;
     float back;
-    float scale = abs(ref)/(abs(ref) + 64);
+    float scale = (abs(ref)/(abs(ref) + 64))*0.25;
     float angle = (180/(1+exp(-0.01 + ref))) - 90;
 
     if(ref <= range)
@@ -79,11 +69,45 @@ std::array<std::tuple<float, float>, 4> WAMV::MajorControl(float ref, float rang
     return thrusters;
 }
 
+void WAMV::GetMatrix()
+{
+    std::vector<std::vector<float>> distance_matrix;
+    std::vector<float> row;
+    double goal_vector[2];
+    float distance;
+
+    for(int i = 0; i < goals.size(); i++)
+    {
+        row.clear();
+        for(int x = 0; x < goals.size(); x++)
+        {
+            goal_vector[0] = ((goals.at(i))[0] - (goals.at(x))[0])*6371000*M_PI/180;
+            goal_vector[1] = ((goals.at(i))[0] - (goals.at(x))[0])*6371000*M_PI/180;
+            distance = sqrt(pow(goal_vector[0], 2) + (goal_vector[1], 2));
+            row.push_back(distance);
+        }
+        distance_matrix.push_back(row);
+    }
+
+    //sort goals from tsp
+    UpdateAngle();
+}
+
+void WAMV::GoalReached()
+{
+    if(goals.size() < 1){return;}
+    goals.erase(goals.begin());
+    UpdateAngle();
+    //consider resorting goals 
+}
 
 ///@brief Update the target vector and reference angle to goal
 void WAMV::UpdateAngle()
 {
+    if(goals.size() <= 0){/*target_vector[0] = 0; target_vector[1] = 0; target_angle = 0;*/ return;}
+
     double target[2];
+    std::array<double, 3> goal = goals.front();
     float ref_angle;
     float distance;
 
@@ -163,14 +187,20 @@ std::array<std::tuple<float, float>, 4> WAMV::MiniControl(float x, float y, floa
     float distance = sqrt(pow(target_vector[0], 2) + (target_vector[1] , 2));
     // ROS_INFO(std::to_string(distance).c_str());
     float scalar;
+    float max = cmd[0];
 
-    scalar = distance / (distance +a);
-    // scalar = 1;
+    for(int i = 1; i < 4; i++)
+    {
+        if(cmd[i] > max){max = cmd[i];}
+    }
+
+    // scalar = distance / (distance +a);
+    scalar = 1;
 
     for(int i = 0; i < 4; i++)
     {
-        // cmd[i] = (cmd[i]/(abs(O_x) + abs(O_y))) * scalar;
-        cmd[i] = (cmd[i]/(abs(O_x) + abs(O_y))) * scalar;
+        cmd[i] = (cmd[i]/(abs(O_x)+ abs(O_y))) * scalar;
+        // cmd[i] = (cmd[i]/max) * scalar;
     }
     // float temp = (tan((O_a * M_PI) / 360)) / 4;
     // cmd[0] = (pow(distance, 2)/init) * cmd[0]; // Incorporate Ratio
@@ -200,9 +230,13 @@ double* WAMV::ReturnTargetVector()
     return target_vector;
 }
 
-double* WAMV::ReturnGoal()
+std::array<double, 3> WAMV::ReturnGoal()
 {
-    return goal;
+    if(goals.size() <= 0)
+    {
+        return {0, 0};
+    }
+    return goals.front();
 }
 
 double* WAMV::ReturnLocation()
@@ -222,12 +256,22 @@ void WAMV::IMUCallback(const sensor_msgs::Imu msg)
     heading = ConvertOrientation(msg.orientation);
 }
 
-void WAMV::GoalCallback(const geographic_msgs::GeoPoseStamped msg)
+void WAMV::GoalCallback(const geographic_msgs::GeoPath msg)
 {
-    goal[0] = msg.pose.position.longitude;
-    goal[1] = msg.pose.position.latitude;
-    goal[2] = ConvertOrientation(msg.pose.orientation);
-    UpdateAngle();
+    // read data into multidimentional vector or array
+    // float size = sizeof(msg.poses)/sizeof(msg.poses[0]);
+    //  ROS_INFO("%s", std::to_string(sizeof(msg.poses[1])).c_str());
+    float size = 3;
+    std::array<double, 3> goal;
+
+    for(int i = 0; i < size; i++)
+    {
+        goal[0] = msg.poses[i].pose.position.longitude;
+        goal[1] = msg.poses[i].pose.position.latitude;
+        goal[2] = ConvertOrientation(msg.poses[i].pose.orientation);
+        goals.push_back(goal);
+    }
+    GetMatrix();
 }
 
 
