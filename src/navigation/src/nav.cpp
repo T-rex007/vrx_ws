@@ -1,23 +1,11 @@
 #include <ros/ros.h>
 #include "navigation/wamv.h"
 #include "controllers/pid.h"
-#include "vrx_gazebo/Task.h"
 
 
 #define SAMPLE 100
 #define SENSITIVITY 1
 
-bool ready_flag = false;
-
-void TaskCallback(vrx_gazebo::Task msg)
-{
-    ROS_INFO("%s",msg.state.c_str());
-    if("ready" == msg.state)
-    {
-        ready_flag = true;
-
-    }
-}
 
 int main(int argc, char **argv)
 {
@@ -28,15 +16,12 @@ int main(int argc, char **argv)
     // Spinners allows ROS messages to be processed during blocking services
     ros::AsyncSpinner spinner(2);
     spinner.start();
-
-    ros::AsyncSpinner spinner(2);
-    spinner.start();
     
     // Main access point to communications with the ROS system
     ros::NodeHandle n;
     ros::Rate loop_rate(SAMPLE);
 
-    ros::Subscriber state = n.subscribe("/vrx/task/info", QUEUE, TaskCallback);
+    ROS_INFO("Navigation Package: started successfully");
 
     WAMV boat(&n);
     PID horizontal(&n);
@@ -44,7 +29,7 @@ int main(int argc, char **argv)
     PID angle(&n);
     PID major(&n);
 
-    std::array<double, 3> goal = boat.ReturnGoal();
+    double *goal = boat.ReturnGoal();
     double *target_vector = boat.ReturnTargetVector();
     double *location = boat.ReturnLocation();
     double distance;
@@ -67,27 +52,27 @@ int main(int argc, char **argv)
     vertical.SetRef(0);
     angle.SetRef(goal[2]);
     major.SetRef(0);
-    
 
-    while(!ready_flag)
-    {
-    }
-    state.shutdown();
+    while(boat.ReturnAngle() == 0){ loop_rate.sleep(); }
+
+    boat.UpdateGoal();
+    
 
     while (ros::ok())
     {
         target_vector = boat.ReturnTargetVector();
         location = boat.ReturnLocation();
         goal = boat.ReturnGoal();
+        //ROS_ERROR("Goal[0]: %f, Goal[1]: %f, Goal[2]: %f", goal[0], goal[1], goal[2]);
         distance = sqrt(pow(target_vector[0],2)+pow(target_vector[1],2));
         temp = boat.ReturnAngle();
         // ROS_INFO("lx: %s", std::to_string(location[0]).c_str());
         // ROS_INFO("ly: %s", std::to_string(location[1]).c_str());
         // ROS_INFO("gx: %s", std::to_string(goal[0]).c_str());
         // ROS_INFO("gy: %s", std::to_string(goal[1]).c_str());
-        ROS_INFO("head: %s", std::to_string(temp).c_str());
-        ROS_INFO("tx: %s", std::to_string(target_vector[0]).c_str());
-        ROS_INFO("ty: %s", std::to_string(target_vector[1]).c_str());
+        //ROS_INFO("head: %s", std::to_string(temp).c_str());
+        //ROS_INFO("tx: %s", std::to_string(target_vector[0]).c_str());
+        //ROS_INFO("ty: %s", std::to_string(target_vector[1]).c_str());
 
         calculated = boat.CalcAngle(boat.ReturnAngle());    //consider using raw target angle instead of difference
 
@@ -106,15 +91,13 @@ int main(int argc, char **argv)
             O_y = target_vector[1];
             thrusters = boat.MiniControl(O_x, O_y, O_a, 3.5); 
         }else{
-            boat.GoalReached();
+            boat.GoalReached(true);
         }
 
         boat.UpdateThruster(thrusters);
         loop_rate.sleep();
         
     }
-
-    ROS_INFO("Navigation Package: started successfully");
 
     // Wait for this node to be shutdown, whether through Ctrl-C, ros::shutdown() or similar
     ros::waitForShutdown();

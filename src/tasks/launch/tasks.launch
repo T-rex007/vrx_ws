@@ -1,4 +1,10 @@
 <launch>
+    <!-- Start Tasks Package -->
+    <node 
+        name="tasks" 
+        pkg="tasks" 
+        type="tasks" 
+        output="screen"/>
 
     <!-- Start Navigation Package -->
     <node

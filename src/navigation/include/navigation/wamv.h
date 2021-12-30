@@ -2,6 +2,7 @@
 #define _WAMV_H_
 
 #include <ros/ros.h>
+#include <std_msgs/Bool.h>
 #include <std_msgs/Float32.h>
 #include <sensor_msgs/NavSatFix.h>
 #include <sensor_msgs/Imu.h>
@@ -20,7 +21,6 @@ public:
     /// @brief Constructor for the WAMV
     explicit WAMV(ros::NodeHandle *node_handle);
     
-
     /// @brief Destructor for the WAMV
     ~WAMV();
 
@@ -38,7 +38,7 @@ public:
 
     void GetMatrix();
 
-    void GoalReached();
+    void GoalReached(const bool flag);
 
     void UpdateThruster(std::array<std::tuple<float, float>, 4> thrusters);
 
@@ -48,7 +48,9 @@ public:
 
     double* ReturnTargetVector();
 
-    std::array<double, 3> ReturnGoal();
+    double* ReturnGoal();
+
+    void UpdateGoal();
 
     double* ReturnLocation();
 
@@ -56,20 +58,22 @@ public:
 
     void IMUCallback(const sensor_msgs::Imu msg);
 
-    void GoalCallback(const geographic_msgs::GeoPath msg);
+    void GoalCallback(const geographic_msgs::GeoPoseStamped msg);
 
 
 private:
     ros::NodeHandle node; // ROS node handler
     double location[2];   //x and y pos of robot center
     float heading;    //heading of front of the robot 
-    std::vector<std::array<double, 3>> goals;  //location of goal positions
-    double target_vector[2];     //vector from current location to the goal
+    //std::vector<std::array<double, 3>> goals;  //location of goal positions
+    double goal[3];
+    double target_vector[2];  //vector from current location to the goal
     float target_angle;       //angle between north and goal distance
     ros::Subscriber gps;
     ros::Subscriber imu;
     ros::Subscriber goal_node;
     ros::Publisher thrusters_pub[8];
+    ros::Publisher goal_reached_pub;
 
 };
 

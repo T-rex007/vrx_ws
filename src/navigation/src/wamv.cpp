@@ -4,9 +4,11 @@
 WAMV::WAMV(ros::NodeHandle *node_handle)
     : node(*node_handle)
 {
-    goal_node = node.subscribe("/vrx/wayfinding/waypoints", QUEUE, &WAMV::GoalCallback, this);
+    goal_node = node.subscribe("/tasks/goal", QUEUE, &WAMV::GoalCallback, this);
     gps = node.subscribe("/wamv/sensors/gps/gps/fix", QUEUE, &WAMV::GPSCallback, this);
     imu = node.subscribe("/wamv/sensors/imu/imu/data", QUEUE, &WAMV::IMUCallback, this);
+
+    goal_reached_pub = node.advertise<std_msgs::Bool>("/navigation/goal_reached", QUEUE);
 
     thrusters_pub[0] = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_cmd", QUEUE);
     thrusters_pub[1] = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_angle", QUEUE);
@@ -69,46 +71,49 @@ std::array<std::tuple<float, float>, 4> WAMV::MajorControl(float ref, float rang
     return thrusters;
 }
 
-void WAMV::GetMatrix()
+// void WAMV::GetMatrix()
+// {
+//     std::vector<std::vector<float>> distance_matrix;
+//     std::vector<float> row;
+//     double goal_vector[2];
+//     float distance;
+
+//     for(int i = 0; i < goals.size(); i++)
+//     {
+//         row.clear();
+//         for(int x = 0; x < goals.size(); x++)
+//         {
+//             goal_vector[0] = ((goals.at(i))[0] - (goals.at(x))[0])*6371000*M_PI/180;
+//             goal_vector[1] = ((goals.at(i))[0] - (goals.at(x))[0])*6371000*M_PI/180;
+//             distance = sqrt(pow(goal_vector[0], 2) + (goal_vector[1], 2));
+//             row.push_back(distance);
+//         }
+//         distance_matrix.push_back(row);
+//     }
+
+//     //sort goals from tsp
+//     UpdateAngle();
+// }
+
+void WAMV::GoalReached(const bool flag)
 {
-    std::vector<std::vector<float>> distance_matrix;
-    std::vector<float> row;
-    double goal_vector[2];
-    float distance;
-
-    for(int i = 0; i < goals.size(); i++)
-    {
-        row.clear();
-        for(int x = 0; x < goals.size(); x++)
-        {
-            goal_vector[0] = ((goals.at(i))[0] - (goals.at(x))[0])*6371000*M_PI/180;
-            goal_vector[1] = ((goals.at(i))[0] - (goals.at(x))[0])*6371000*M_PI/180;
-            distance = sqrt(pow(goal_vector[0], 2) + (goal_vector[1], 2));
-            row.push_back(distance);
-        }
-        distance_matrix.push_back(row);
-    }
-
-    //sort goals from tsp
-    UpdateAngle();
-}
-
-void WAMV::GoalReached()
-{
-    if(goals.size() < 1){return;}
-    goals.erase(goals.begin());
-    UpdateAngle();
+    // if(goals.size() < 1){return;}
+    // goals.erase(goals.begin());
+    // UpdateAngle();
     //consider resorting goals 
+    std_msgs::Bool msg;
+    msg.data = flag;
+    goal_reached_pub.publish(msg);
 }
 
 ///@brief Update the target vector and reference angle to goal
 void WAMV::UpdateAngle()
 {
-    if(goals.size() <= 0){/*target_vector[0] = 0; target_vector[1] = 0; target_angle = 0;*/ return;}
+    //if(goals.size() <= 0){/*target_vector[0] = 0; target_vector[1] = 0; target_angle = 0;*/ return;}
 
     double temp[2];
     double target[2];
-    std::array<double, 3> goal = goals.front();
+    //std::array<double, 3> goal = goals.front();
     float ref_angle;
     float distance;
     temp[0] = (goal[0] - location[0])*6371000*M_PI/180;
@@ -234,13 +239,22 @@ double* WAMV::ReturnTargetVector()
     return target_vector;
 }
 
-std::array<double, 3> WAMV::ReturnGoal()
+double* WAMV::ReturnGoal()
 {
-    if(goals.size() <= 0)
-    {
-        return {0, 0};
-    }
-    return goals.front();
+    // if(goals.size() <= 0)
+    // {
+    //     return {0, 0};
+    // }
+    // return goals.front();
+
+    return goal;
+}
+
+void WAMV::UpdateGoal()
+{
+    goal[0] = location[0];
+    goal[1] = location[1];
+    goal[2] = heading;
 }
 
 double* WAMV::ReturnLocation()
@@ -261,20 +275,28 @@ void WAMV::IMUCallback(const sensor_msgs::Imu msg)
     // ROS_INFO("head: %s", std::to_string(heading).c_str());
 }
 
-void WAMV::GoalCallback(const geographic_msgs::GeoPath msg)
+void WAMV::GoalCallback(const geographic_msgs::GeoPoseStamped msg)
 {
     // read data into multidimentional vector or array
     // float size = sizeof(msg.poses)/sizeof(msg.poses[0]);
     //  ROS_INFO("%s", std::to_string(sizeof(msg.poses[1])).c_str());
-    float size = 3;
-    std::array<double, 3> goal;
+    
+    //float size = 3;
+    //std::array<double, 3> goal;
 
-    for(int i = 0; i < size; i++)
-    {
-        goal[0] = msg.poses[i].pose.position.longitude;
-        goal[1] = msg.poses[i].pose.position.latitude;
-        goal[2] = ConvertOrientation(msg.poses[i].pose.orientation);
-        goals.push_back(goal);
-    }
-    GetMatrix();
+    // for(int i = 0; i < size; i++)
+    // {
+    //     goal[0] = msg.poses[i].pose.position.longitude;
+    //     goal[1] = msg.poses[i].pose.position.latitude;
+    //     goal[2] = ConvertOrientation(msg.poses[i].pose.orientation);
+    //     goals.push_back(goal);
+    // }
+
+    //GetMatrix();
+    
+    goal[0] = msg.pose.position.longitude;
+    goal[1] = msg.pose.position.latitude;
+    goal[2] = ConvertOrientation(msg.pose.orientation);
+    GoalReached(false);
+    UpdateAngle();
 }

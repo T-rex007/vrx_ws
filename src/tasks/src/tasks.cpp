@@ -31,7 +31,6 @@ int main(int argc, char **argv)
     ROS_INFO("Tasks Package: processing in Inital State");
     /* <-- Insert Code Here --> */
     process.InitSubsAndPubs();
-    process.InitNodes();
     while (process.taskState == "initial"){ loop_rate.sleep(); }
 
     // Perform processing during Ready State
@@ -42,7 +41,8 @@ int main(int argc, char **argv)
     // Perform processing during Running State
     ROS_INFO("Tasks Package: processing in Running State");
     /* <-- Insert Code Here --> */
-
+    process.PublishMessages();
+    while (ros::ok()){ loop_rate.sleep(); }
 
     // Wait for this node to be shutdown, whether through Ctrl-C, ros::shutdown() or similar
     ros::waitForShutdown();
