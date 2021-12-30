@@ -4,6 +4,7 @@
 PID::PID(ros::NodeHandle *node_handle)
     : node(*node_handle)
 {
+    setpoint = 0;
     return;
 }
 
@@ -19,7 +20,6 @@ float PID::Compute(float input)
     ros::Time now;
     double difference;
     double error_p;
-    double error_i;
     double error_d;
     float output;
 

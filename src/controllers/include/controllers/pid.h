@@ -32,7 +32,8 @@ private:
     float kp;
     float ki;
     float kd;
-    float last_error;
+    double error_i;
+    double last_error;
     ros::Time last_time;
 };
 
