@@ -1,0 +1,10 @@
+<launch>
+
+    <!-- Start Navigation Package -->
+    <node
+        name="nav"
+        pkg="navigation"
+        type="nav"
+        output="screen"/>
+
+</launch>
