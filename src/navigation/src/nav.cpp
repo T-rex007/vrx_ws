@@ -46,12 +46,12 @@ int main(int argc, char **argv)
 
     horizontal.SetGains(2,0,2);
     vertical.SetGains(2,0,2);
-    angle.SetGains(1,1,1);
+    angle.SetGains(1,0,1);
     major.SetGains(1,1,1);
 
     horizontal.SetRef(0);
     vertical.SetRef(0);
-    angle.SetRef(goal[2]);
+    angle.SetRef(0);
     major.SetRef(0);
 
     while(boat.ReturnAngle() == 0){ loop_rate.sleep(); }
@@ -71,17 +71,16 @@ int main(int argc, char **argv)
         //ROS_ERROR("Goal[0]: %f, Goal[1]: %f, Goal[2]: %f", goal[0], goal[1], goal[2]);
         distance = sqrt(pow(target_vector[0],2)+pow(target_vector[1],2));
         temp = boat.ReturnAngle();
+        calculated = boat.CalcAngle();    //consider using raw target angle instead of difference
         //ROS_INFO("Tx: %f, Tx: %f", target_vector[0], target_vector[1]);
         //ROS_INFO("X: %f, Y: %f", offset_distances[0], offset_distances[1]);
         // ROS_INFO("lx: %s", std::to_string(location[0]).c_str());
         // ROS_INFO("ly: %s", std::to_string(location[1]).c_str());
-        // ROS_INFO("gx: %s", std::to_string(goal[0]).c_str());
-        // ROS_INFO("gy: %s", std::to_string(goal[1]).c_str());
-        //ROS_INFO("head: %s", std::to_string(temp).c_str());
-        //ROS_INFO("tx: %s", std::to_string(target_vector[0]).c_str());
-        //ROS_INFO("ty: %s", std::to_string(target_vector[1]).c_str());
-
-        calculated = boat.CalcAngle();    //consider using raw target angle instead of difference
+        ROS_INFO("gx: %s", std::to_string(goal[2]).c_str());
+        ROS_INFO("head: %s", std::to_string(temp).c_str());
+        ROS_INFO("angle: %s", std::to_string(calculated).c_str());
+        ROS_INFO("tx: %s", std::to_string(target_vector[0]).c_str());
+        ROS_INFO("ty: %s", std::to_string(target_vector[1]).c_str());
 
         if(distance > 99999)
         {
@@ -91,12 +90,12 @@ int main(int argc, char **argv)
         }else if(distance > SENSITIVITY)
         {
             //consider reseting major control pid values here
-            //O_x = horizontal.Compute(target_vector[0]);
-            //O_y = vertical.Compute(target_vector[1]);
-            //O_a = angle.Compute(calculated);
-            O_a = calculated;
-            O_x = target_vector[0];
-            O_y = target_vector[1];
+            O_x = horizontal.Compute(target_vector[0]);
+            O_y = vertical.Compute(target_vector[1]);
+            O_a = angle.Compute(calculated);
+            // O_a = calculated;
+            // O_x = target_vector[0];
+            // O_y = target_vector[1];
             thrusters = boat.MiniControl(O_x, O_y, O_a, 3.5); 
         }else if(abs(calculated) < SENSITIVITY2){
             boat.GoalReached(true);

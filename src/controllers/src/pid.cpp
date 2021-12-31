@@ -26,7 +26,7 @@ float PID::Compute(float input)
     now = ros::Time::now();
     difference = (now - last_time).toSec();
     
-    error_p = setpoint - input;
+    error_p = input - setpoint;
     error_i += (error_p * difference);
     error_d = (error_p - last_error) / difference;
 

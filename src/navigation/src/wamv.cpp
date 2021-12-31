@@ -185,7 +185,7 @@ std::array<std::tuple<float, float>, 4> WAMV::MiniControl(float x, float y, floa
     // ROS_INFO(std::to_string(y).c_str());
     scalx = (2/(1+exp(-0.05 * x))) - 1;
     scaly = (2/(1+exp(-0.05 * y))) - 1;
-    scala = (abs(angle)/(abs(angle) + 50));
+    scala = (abs(angle)/(abs(angle) + 60));
     // scalx = 1;
     // scaly = 1;
     O_x = scalx;
@@ -208,13 +208,13 @@ std::array<std::tuple<float, float>, 4> WAMV::MiniControl(float x, float y, floa
     }
 
     // scalar = distance / (distance +a);
-    // scalar = (2/(1+exp(-0.22 * distance))) - 1;
-    scalar = 1;
+    scalar = (2/(1+exp(-0.33 * distance))) - 1;
+    // scalar = 1;
 
     for(int i = 0; i < 4; i++)
     {
-        cmd[i] = (cmd[i]/(abs(O_x)+ abs(O_y) + abs(O_a))) * scalar;
-        // cmd[i] = (cmd[i]/3) * scalar;
+        // cmd[i] = (cmd[i]/(abs(O_x)+ abs(O_y) + abs(O_a))) * scalar;
+        cmd[i] = (cmd[i]/max) * scalar;
     }
     // float temp = (tan((O_a * M_PI) / 360)) / 4;
     // cmd[0] = (pow(distance, 2)/init) * cmd[0]; // Incorporate Ratio
