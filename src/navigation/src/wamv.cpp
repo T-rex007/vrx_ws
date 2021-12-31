@@ -33,16 +33,16 @@ float WAMV::ReturnAngle()
 }
 
 ///@brief Calculates the Angle the boat will turn
-float WAMV::CalcAngle(float ref_angle)
+float WAMV::CalcAngle()
 {
     float difference;
-    difference = ref_angle - heading;
+    difference = heading - goal[2];     //figure out why this works
     if (abs(difference) > 180)  //consider accounting for momentum in turning
     { 
         difference = (-difference/abs(difference)) * (360 - abs(difference));
 
     } 
-   return difference;
+    return difference;
 }
 
 ///@brief Turns the boat
@@ -168,48 +168,53 @@ double WAMV::ConvertOrientation(geometry_msgs::Quaternion quat)
     return yaw;
 }
 
-std::array<std::tuple<float, float>, 4> WAMV::MiniControl(float x, float y, float O_a, float a, float ratio)
+std::array<std::tuple<float, float>, 4> WAMV::MiniControl(float x, float y, float angle, float a, float ratio)
 {
     std::array<std::tuple<float, float>, 4> thrusters;
     float scalx;
     float scaly;
+    float scala;
     float O_x;
     float O_y;
+    float O_a;
 
     // float x = log*6371000*M_PI/180;
     // float y = lat*6371000*M_PI/180;
     // ROS_INFO("compute");
     // ROS_INFO(std::to_string(x).c_str());
     // ROS_INFO(std::to_string(y).c_str());
-    scalx = abs(x)/(abs(x) + a);
-    scaly = abs(y)/(abs(y) + a);
+    scalx = (2/(1+exp(-0.05 * x))) - 1;
+    scaly = (2/(1+exp(-0.05 * y))) - 1;
+    scala = (abs(angle)/(abs(angle) + 50));
     // scalx = 1;
     // scaly = 1;
-    O_x = scalx * x;
-    O_y = scaly * y;
+    O_x = scalx;
+    O_y = scaly;
+    O_a = (angle/abs(angle))* scala;
     // ROS_INFO(std::to_string(O_x).c_str());
     // ROS_INFO(std::to_string(O_y).c_str());
 
-    float cmd[4] = {O_x + O_y,-O_x + O_y,-O_x + O_y,O_x + O_y};
+    float cmd[4] = {O_x + O_y + O_a, -O_x + O_y - O_a, -O_x + O_y + O_a, O_x + O_y - O_a};
     float thruster_angles[4] = {-45,45,45,-45};
 
     float distance = sqrt(pow(target_vector[0], 2) + (target_vector[1] , 2));
     // ROS_INFO(std::to_string(distance).c_str());
     float scalar;
-    float max = cmd[0];
+    float max = abs(cmd[0]);
 
     for(int i = 1; i < 4; i++)
     {
-        if(cmd[i] > max){max = cmd[i];}
+        if(abs(cmd[i]) > max){max = abs(cmd[i]);}
     }
 
     // scalar = distance / (distance +a);
+    // scalar = (2/(1+exp(-0.22 * distance))) - 1;
     scalar = 1;
 
     for(int i = 0; i < 4; i++)
     {
-        cmd[i] = (cmd[i]/(abs(O_x)+ abs(O_y))) * scalar;
-        // cmd[i] = (cmd[i]/max) * scalar;
+        cmd[i] = (cmd[i]/(abs(O_x)+ abs(O_y) + abs(O_a))) * scalar;
+        // cmd[i] = (cmd[i]/3) * scalar;
     }
     // float temp = (tan((O_a * M_PI) / 360)) / 4;
     // cmd[0] = (pow(distance, 2)/init) * cmd[0]; // Incorporate Ratio
@@ -262,15 +267,66 @@ double* WAMV::ReturnLocation()
     return location;
 }
 
+void WAMV::CalcVelocities()
+{
+    ros::Time now = ros::Time::now();
+    double dt = (now - last_time).toSec();;
+
+    // vel[0] = vel[0] + (linear_acc[0] * dt);
+    // vel[1] = vel[1] + (linear_acc[1] * dt);
+
+
+
+    offset_distances[0] = (location[0] - prev_locations[0])*6371000*M_PI/180;
+    offset_distances[1] = (location[1] - prev_locations[1])*6371000*M_PI/180;
+    
+    vel[0] = offset_distances[0] / dt;
+    vel[1] = offset_distances[1] / dt;
+
+    prev_locations[0] = location[0];
+    prev_locations[1] = location[1];
+
+    rec_linear_acc[0] = linear_acc[0];
+    rec_linear_acc[1] = linear_acc[1];
+
+    //ROS_INFO("X: %f, Y: %f", offset_distances[0], offset_distances[1]);
+    //ROS_INFO("VelX: %f, VelY: %f", vel[0], vel[1]);
+    //ROS_INFO("AccX: %f, AccY: %f", linear_acc[0], linear_acc[1]);
+
+    last_time = now;
+}
+
+double* WAMV::ReturnDistances()
+{
+    double times[2];
+
+    //x = -c / m
+    times[0] = -vel[0] / rec_linear_acc[0];
+    times[1] = -vel[1] / rec_linear_acc[1];
+
+    // d = ut + 0.5at^2
+    distances[0] = (vel[0] * times[0]) + (0.5 * rec_linear_acc[0] * pow(times[0], 2));
+    distances[1] = (vel[1] * times[1]) + (0.5 * rec_linear_acc[1] * pow(times[1], 2));
+
+    
+    //ROS_INFO("X: %f, Y: %f, VelX: %f, VelY: %f, AccX: %f, AccY: %f", distances[0], distances[1], vel[0], vel[1], rec_linear_acc[0], rec_linear_acc[1]);
+    //ROS_INFO("^ TimeX: %f, TimeY: %f", times[0], times[1]);
+
+    return distances;
+}
+
 void WAMV::GPSCallback(const sensor_msgs::NavSatFix msg)
 {
     location[0] = msg.longitude;
     location[1] = msg.latitude;
+
     UpdateAngle();
 } 
 
 void WAMV::IMUCallback(const sensor_msgs::Imu msg)
 {
+    linear_acc[0] = msg.linear_acceleration.x;
+    linear_acc[1] = msg.linear_acceleration.y;
     heading  = ConvertOrientation(msg.orientation);
     // ROS_INFO("head: %s", std::to_string(heading).c_str());
 }
@@ -293,7 +349,7 @@ void WAMV::GoalCallback(const geographic_msgs::GeoPoseStamped msg)
     // }
 
     //GetMatrix();
-    
+
     goal[0] = msg.pose.position.longitude;
     goal[1] = msg.pose.position.latitude;
     goal[2] = ConvertOrientation(msg.pose.orientation);

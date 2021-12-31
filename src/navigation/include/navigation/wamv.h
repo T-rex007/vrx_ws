@@ -28,7 +28,7 @@ public:
     float ReturnAngle();
 
     ///@brief Calculates the Angle the boat will turn
-    float CalcAngle(float ref_angle);
+    float CalcAngle();
 
     ///@brief Turns the boat
     std::array<std::tuple<float, float>, 4> MajorControl(float ref, float range = 45);
@@ -44,7 +44,7 @@ public:
 
     double ConvertOrientation(geometry_msgs::Quaternion quat);
 
-    std::array<std::tuple<float, float>, 4> MiniControl(float x, float y, float O_a, float a, float ratio = 0.5);
+    std::array<std::tuple<float, float>, 4> MiniControl(float x, float y, float angle, float a, float ratio = 0.5);
 
     double* ReturnTargetVector();
 
@@ -53,6 +53,10 @@ public:
     void UpdateGoal();
 
     double* ReturnLocation();
+
+    void CalcVelocities();
+
+    double* ReturnDistances();
 
     void GPSCallback(const sensor_msgs::NavSatFix msg);
 
@@ -67,6 +71,13 @@ private:
     float heading;    //heading of front of the robot 
     //std::vector<std::array<double, 3>> goals;  //location of goal positions
     double goal[3];
+    double linear_acc[2] = {0,0};
+    double rec_linear_acc[2] = {0,0};
+    double vel[2] = {0,0};
+    double offset_distances[2] = {0,0};
+    double prev_locations[2] = {0, 0};
+    double distances[2];
+    ros::Time last_time;
     double target_vector[2];  //vector from current location to the goal
     float target_angle;       //angle between north and goal distance
     ros::Subscriber gps;
