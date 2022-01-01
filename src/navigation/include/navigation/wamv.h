@@ -36,8 +36,6 @@ public:
     ///@brief Update the target vector and reference angle to goal
     void UpdateAngle();
 
-    void GetMatrix();
-
     void GoalReached(const bool flag);
 
     void UpdateThruster(std::array<std::tuple<float, float>, 4> thrusters);

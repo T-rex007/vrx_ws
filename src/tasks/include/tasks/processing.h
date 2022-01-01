@@ -6,8 +6,11 @@
 #include <std_msgs/Bool.h>
 #include <geographic_msgs/GeoPoseStamped.h>
 #include <geographic_msgs/GeoPath.h>
+#include <sensor_msgs/NavSatFix.h>
 
+#include <limits>
 #include <math.h>
+#include <vector>
 
 #define QUEUE 100
 
@@ -29,6 +32,12 @@ public:
     /// @brief Publish the correct messages based on the task
     void PublishMessages();
 
+    /// @brief finds optimum path of the wamv give a cost matrix using recursion
+    std::vector<float> GoalSort(std::vector<std::vector<float>> matrix, int node, std::vector<int> nodes);
+
+    /// @brief Function to optimize the goal pathing
+    void GetMatrix();
+
     /// @brief Callback function for tasks subscriber
     void TasksCallback(const vrx_gazebo::Task msg);
 
@@ -40,9 +49,12 @@ public:
 
     /// @brief Callback function to indicate the wamv reached the goal
     void GoalReachedCallback(const std_msgs::Bool msg);
+    /// @brief Callback function to get GPS location
+    void GPSCallback(const sensor_msgs::NavSatFix msg);
 
 private:
     ros::NodeHandle node; // ROS node handler
+    ros::Subscriber gps;
     ros::Subscriber tasksSub; // ROS subscriber for tasks info topic
     ros::Subscriber goalT1Sub; // ROS subcriber for goal topic in task 1
     ros::Subscriber goalT2Sub; // ROS subcriber for goal topic in task 2
@@ -52,6 +64,7 @@ private:
     geographic_msgs::GeoPath waypoints; // Stores waypoints message for task 2
     int waypointsNo; // Keeps track of the number of waypoints
     int goalNo; // Keeps track of the current goal
+    double location[2];   //x and y pos of robot center
     std_msgs::Bool goalReachedFlag; // Boolean to indicate if the wamv reached the goal
 };
 

@@ -71,30 +71,6 @@ std::array<std::tuple<float, float>, 4> WAMV::MajorControl(float ref, float rang
     return thrusters;
 }
 
-// void WAMV::GetMatrix()
-// {
-//     std::vector<std::vector<float>> distance_matrix;
-//     std::vector<float> row;
-//     double goal_vector[2];
-//     float distance;
-
-//     for(int i = 0; i < goals.size(); i++)
-//     {
-//         row.clear();
-//         for(int x = 0; x < goals.size(); x++)
-//         {
-//             goal_vector[0] = ((goals.at(i))[0] - (goals.at(x))[0])*6371000*M_PI/180;
-//             goal_vector[1] = ((goals.at(i))[0] - (goals.at(x))[0])*6371000*M_PI/180;
-//             distance = sqrt(pow(goal_vector[0], 2) + (goal_vector[1], 2));
-//             row.push_back(distance);
-//         }
-//         distance_matrix.push_back(row);
-//     }
-
-//     //sort goals from tsp
-//     UpdateAngle();
-// }
-
 void WAMV::GoalReached(const bool flag)
 {
     // if(goals.size() < 1){return;}
