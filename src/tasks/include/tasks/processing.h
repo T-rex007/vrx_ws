@@ -33,7 +33,7 @@ public:
     void PublishMessages();
 
     /// @brief finds optimum path of the wamv give a cost matrix using recursion
-    std::vector<float> GoalSort(std::vector<std::vector<float>> matrix, int node, std::vector<int> nodes);
+    std::vector<float> GoalSort(std::vector<std::vector<float>> matrix, int current, std::vector<int> nodes);
 
     /// @brief Function to optimize the goal pathing
     void GetMatrix();
@@ -65,6 +65,7 @@ private:
     int waypointsNo; // Keeps track of the number of waypoints
     int goalNo; // Keeps track of the current goal
     double location[2];   //x and y pos of robot center
+    std::vector<float> path;
     std_msgs::Bool goalReachedFlag; // Boolean to indicate if the wamv reached the goal
 };
 

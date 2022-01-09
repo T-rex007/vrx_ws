@@ -76,8 +76,8 @@ int main(int argc, char **argv)
         //ROS_INFO("X: %f, Y: %f", offset_distances[0], offset_distances[1]);
         // ROS_INFO("lx: %s", std::to_string(location[0]).c_str());
         // ROS_INFO("ly: %s", std::to_string(location[1]).c_str());
-        ROS_INFO("gx: %s", std::to_string(goal[2]).c_str());
-        ROS_INFO("head: %s", std::to_string(temp).c_str());
+        // ROS_INFO("gx: %s", std::to_string(goal[2]).c_str());
+        // ROS_INFO("head: %s", std::to_string(temp).c_str());
         ROS_INFO("angle: %s", std::to_string(calculated).c_str());
         ROS_INFO("tx: %s", std::to_string(target_vector[0]).c_str());
         ROS_INFO("ty: %s", std::to_string(target_vector[1]).c_str());
