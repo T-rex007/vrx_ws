@@ -32,11 +32,29 @@ float WAMV::ReturnAngle()
    return heading;
 }
 
+float WAMV::ReturnTargetAngle()
+{
+   return target_angle;
+}
+
 ///@brief Calculates the Angle the boat will turn
 float WAMV::CalcAngle()
 {
     float difference;
     difference = heading - goal[2];     //figure out why this works
+    if (abs(difference) > 180)  //consider accounting for momentum in turning
+    { 
+        difference = (-difference/abs(difference)) * (360 - abs(difference));
+
+    } 
+    return difference;
+}   
+
+float WAMV::CalcRef()
+{
+    float difference;
+    // difference = target_angle - heading;
+    difference = target_angle;
     if (abs(difference) > 180)  //consider accounting for momentum in turning
     { 
         difference = (-difference/abs(difference)) * (360 - abs(difference));
@@ -50,18 +68,20 @@ std::array<std::tuple<float, float>, 4> WAMV::MajorControl(float ref, float rang
 {
     std::array<std::tuple<float, float>, 4> thrusters;
     float back;
-    float scale = (abs(ref)/(abs(ref) + 64))*0.25;
-    float angle = (180/(1+exp(-0.01 + ref))) - 90;
+    float scale;
+    float angle = (180/(1+exp(-0.04 * ref))) - 90;
 
     if(ref <= range)
     {
         back = 1;   //consider another decay here instead of if
+        scale = 1 - ((abs(ref)/(abs(ref) + range)));
     }else{
         back = 0;
+        scale = (abs(ref)/(abs(ref) + range))*0.5;
     }
 
     float cmd[4] = {scale, scale, back, back};
-    float thruster_angle[4] = {angle, angle, 0, 0};
+    float thruster_angle[4] = {-angle, -angle, 0, 0};
 
     for (int i = 0; i < 4; i++)
     {
@@ -98,19 +118,38 @@ void WAMV::UpdateAngle()
     target[0] = -temp[1] * cos(M_PI*(heading/180)) + temp[0] * sin(M_PI*(heading/180));
     // target[0] = temp[0];
     // target[1] = temp[1];
-    distance = sqrt(pow(target[0], 2) + (target[1], 2));
+    // distance = sqrt(std::pow(temp[0], 2) + std::pow(temp[1], 2));
+    distance = sqrt(std::pow(target[0], 2) + std::pow(target[1], 2));
 
+    // ref_angle = asin(temp[0]/distance);  //angle between euclidean distance vector and north reference in radians
     ref_angle = asin(target[0]/distance);  //angle between euclidean distance vector and north reference in radians
     ref_angle = (ref_angle/M_PI) * 180;     //put in degrees
+
+    ROS_INFO("distance: %s", std::to_string(distance).c_str());
+
+    // distance = sqrt(std::pow(target[0], 2) + std::pow(target[1], 2));
     
     if(target[1] > 0)
     {
-        ref_angle = remainder((ref_angle + 360), 360);
+        // ROS_INFO("test: %s", std::to_string(ref_angle).c_str());
+        ref_angle = ref_angle  + 360;
+        ref_angle = fmod(ref_angle, 360);
     }else
+    {
         ref_angle = -1 * ref_angle + 180;
+    }
 
     std::copy(target, target + 2, target_vector);
     target_angle = ref_angle;
+
+    ROS_INFO("head: %s", std::to_string(heading).c_str());
+    ROS_INFO("ref_angle: %s", std::to_string(ref_angle).c_str());
+    ROS_INFO("difference: %s", std::to_string(CalcRef()).c_str());
+    // ROS_INFO("tempx: %s", std::to_string(temp[0]).c_str());
+    // ROS_INFO("tempy: %s", std::to_string(temp[1]).c_str());
+    ROS_INFO("tx: %s", std::to_string(target[0]).c_str());
+    ROS_INFO("ty: %s", std::to_string(target[1]).c_str());
+    
 }
 
 void WAMV::UpdateThruster(std::array<std::tuple<float, float>, 4> thrusters)

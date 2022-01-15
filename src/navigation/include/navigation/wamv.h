@@ -24,11 +24,17 @@ public:
     /// @brief Destructor for the WAMV
     ~WAMV();
 
-    ///@brief Returns the trajectory of the target
+    ///@brief Returns the trajectory of the heading
     float ReturnAngle();
 
-    ///@brief Calculates the Angle the boat will turn
+    //@brief Returns the trajectory of the target
+    float ReturnTargetAngle();
+
+    ///@brief Calculates the Angle the boat will turn to meet goal angle
     float CalcAngle();
+
+    ///@brief Calculates the Angle the boat will turn to meet target angle
+    float CalcRef();
 
     ///@brief Turns the boat
     std::array<std::tuple<float, float>, 4> MajorControl(float ref, float range = 45);
