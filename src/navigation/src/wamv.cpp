@@ -71,7 +71,7 @@ std::array<std::tuple<float, float>, 4> WAMV::MajorControl(float ref, float rang
     float scale;
     float angle = (180/(1+exp(-0.04 * ref))) - 90;
 
-    if(ref <= range)
+    if(abs(ref) <= range) //not sure if should be abs
     {
         back = 1;   //consider another decay here instead of if
         scale = 1 - ((abs(ref)/(abs(ref) + range)));
@@ -212,7 +212,7 @@ std::array<std::tuple<float, float>, 4> WAMV::MiniControl(float x, float y, floa
     float cmd[4] = {O_x + O_y + O_a, -O_x + O_y - O_a, -O_x + O_y + O_a, O_x + O_y - O_a};
     float thruster_angles[4] = {-45,45,45,-45};
 
-    float distance = sqrt(pow(target_vector[0], 2) + (target_vector[1] , 2));
+    float distance = sqrt(std::pow(target_vector[0], 2) + std::pow(target_vector[1] , 2));
     // ROS_INFO(std::to_string(distance).c_str());
     float scalar;
     float max = abs(cmd[0]);

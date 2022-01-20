@@ -68,7 +68,7 @@ int main(int argc, char **argv)
         location = boat.ReturnLocation();
         goal = boat.ReturnGoal();
         //ROS_ERROR("Goal[0]: %f, Goal[1]: %f, Goal[2]: %f", goal[0], goal[1], goal[2]);
-        distance = sqrt(pow(target_vector[0],2)+pow(target_vector[1],2));
+        distance = sqrt(std::pow(target_vector[0],2)+std::pow(target_vector[1],2));
         head = boat.ReturnAngle();
         
         //ROS_INFO("Tx: %f, Tx: %f", target_vector[0], target_vector[1]);
