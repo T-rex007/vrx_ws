@@ -125,7 +125,7 @@ void WAMV::UpdateAngle()
     ref_angle = asin(target[0]/distance);  //angle between euclidean distance vector and north reference in radians
     ref_angle = (ref_angle/M_PI) * 180;     //put in degrees
 
-    ROS_INFO("distance: %s", std::to_string(distance).c_str());
+    // ROS_INFO("distance: %s", std::to_string(distance).c_str());
 
     // distance = sqrt(std::pow(target[0], 2) + std::pow(target[1], 2));
     
@@ -142,13 +142,13 @@ void WAMV::UpdateAngle()
     std::copy(target, target + 2, target_vector);
     target_angle = ref_angle;
 
-    ROS_INFO("head: %s", std::to_string(heading).c_str());
-    ROS_INFO("ref_angle: %s", std::to_string(ref_angle).c_str());
-    ROS_INFO("difference: %s", std::to_string(CalcRef()).c_str());
+    // ROS_INFO("head: %s", std::to_string(heading).c_str());
+    // ROS_INFO("ref_angle: %s", std::to_string(ref_angle).c_str());
+    // ROS_INFO("difference: %s", std::to_string(CalcRef()).c_str());
     // ROS_INFO("tempx: %s", std::to_string(temp[0]).c_str());
     // ROS_INFO("tempy: %s", std::to_string(temp[1]).c_str());
-    ROS_INFO("tx: %s", std::to_string(target[0]).c_str());
-    ROS_INFO("ty: %s", std::to_string(target[1]).c_str());
+    // ROS_INFO("tx: %s", std::to_string(target[0]).c_str());
+    // ROS_INFO("ty: %s", std::to_string(target[1]).c_str());
     
 }
 
@@ -320,8 +320,8 @@ double* WAMV::ReturnDistances()
     times[1] = -vel[1] / rec_linear_acc[1];
 
     // d = ut + 0.5at^2
-    distances[0] = (vel[0] * times[0]) + (0.5 * rec_linear_acc[0] * pow(times[0], 2));
-    distances[1] = (vel[1] * times[1]) + (0.5 * rec_linear_acc[1] * pow(times[1], 2));
+    distances[0] = (vel[0] * times[0]) + (0.5 * rec_linear_acc[0] * std::pow(times[0], 2));
+    distances[1] = (vel[1] * times[1]) + (0.5 * rec_linear_acc[1] * std::pow(times[1], 2));
 
     
     //ROS_INFO("X: %f, Y: %f, VelX: %f, VelY: %f, AccX: %f, AccY: %f", distances[0], distances[1], vel[0], vel[1], rec_linear_acc[0], rec_linear_acc[1]);

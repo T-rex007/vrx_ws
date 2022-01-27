@@ -138,7 +138,7 @@ void Processing::GetMatrix()
             // ROS_INFO("gy column: %s", std::to_string((goals.at(x))[1]).c_str());
             goal_vector[0] = ((goals.at(i))[0] - (goals.at(x))[0])*6371000*M_PI/180;
             goal_vector[1] = ((goals.at(i))[1] - (goals.at(x))[1])*6371000*M_PI/180;
-            distance = sqrt(pow(goal_vector[0], 2) + (goal_vector[1], 2));
+            distance = sqrt(std::pow(goal_vector[0], 2) + std::pow(goal_vector[1], 2));
             ROS_INFO("Distance: %s", std::to_string(distance).c_str());
             row.push_back(distance);
         }
