@@ -12,13 +12,13 @@
 #include <math.h>
 #include <vector>
 
-#define QUEUE 100
+#define QUEUE 100                       // Number of messages to queue in ROS subscribers before discarding
 
 class Processing
 {
 public:
-    std::string taskName = "NULL"; // Stores current task name
-    std::string taskState = "NULL"; // Stores current task state
+    std::string taskName = "NULL";      // Stores current task name
+    std::string taskState = "NULL";     // Stores current task state
 
     /// @brief Constructor for the Processing
     explicit Processing(ros::NodeHandle *node_handle);
@@ -26,16 +26,16 @@ public:
     /// @brief Destructor for the Processing
     ~Processing();
 
-    /// @brief Initialise the correct subscribers and publishers based on the task
+    /// @brief Initialize the correct subscribers and publishers based on the task
     void InitSubsAndPubs();
 
     /// @brief Publish the correct messages based on the task
     void PublishMessages();
 
-    /// @brief finds optimum path of the wamv give a cost matrix using recursion
+    /// @brief Finds optimum path of the WAMV given a cost matrix using recursion
     std::vector<float> GoalSort(std::vector<std::vector<float>> matrix, int current, std::vector<int> nodes);
 
-    /// @brief Function to optimize the goal pathing
+    /// @brief Function to get the distance matrix and optimize the goal pathing
     void GetMatrix();
 
     /// @brief Callback function for tasks subscriber
@@ -49,24 +49,25 @@ public:
 
     /// @brief Callback function to indicate the wamv reached the goal
     void GoalReachedCallback(const std_msgs::Bool msg);
+
     /// @brief Callback function to get GPS location
     void GPSCallback(const sensor_msgs::NavSatFix msg);
 
 private:
-    ros::NodeHandle node; // ROS node handler
-    ros::Subscriber gps;
-    ros::Subscriber tasksSub; // ROS subscriber for tasks info topic
-    ros::Subscriber goalT1Sub; // ROS subcriber for goal topic in task 1
-    ros::Subscriber goalT2Sub; // ROS subcriber for goal topic in task 2
-    ros::Subscriber goalReachedSub; // ROS subcriber to determine if the wamv reached its goal
-    ros::Publisher goalPub; // ROS Publisher for goal pose
-    geographic_msgs::GeoPoseStamped goal; // Stores goal message for task 1
-    geographic_msgs::GeoPath waypoints; // Stores waypoints message for task 2
-    int waypointsNo; // Keeps track of the number of waypoints
-    int goalNo; // Keeps track of the current goal
-    double location[2];   //x and y pos of robot center
-    std::vector<float> path;
-    std_msgs::Bool goalReachedFlag; // Boolean to indicate if the wamv reached the goal
+    ros::NodeHandle node;                       // ROS node handler
+    ros::Subscriber gps;                        // ROS subscriber for GPS topic
+    ros::Subscriber tasksSub;                   // ROS subscriber for tasks info topic
+    ros::Subscriber goalT1Sub;                  // ROS subcriber for goal topic in task 1
+    ros::Subscriber goalT2Sub;                  // ROS subcriber for goal topic in task 2
+    ros::Subscriber goalReachedSub;             // ROS subcriber to determine if the wamv reached its goal
+    ros::Publisher goalPub;                     // ROS Publisher for goal pose
+    geographic_msgs::GeoPoseStamped goal;       // Stores goal message for task 1
+    geographic_msgs::GeoPath waypoints;         // Stores waypoints message for task 2
+    int waypointsNo;                            // Keeps track of the number of waypoints
+    int goalNo;                                 // Keeps track of the current goal
+    double location[2];                         // X and Y position of WAMV center
+    std::vector<float> path;                    // 
+    std_msgs::Bool goalReachedFlag;             // Boolean to indicate if the wamv reached the goal
 };
 
 #endif

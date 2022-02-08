@@ -2,6 +2,7 @@
 #define _WAMV_H_
 
 #include <ros/ros.h>
+#include <ros/package.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float32.h>
 #include <sensor_msgs/NavSatFix.h>
@@ -48,7 +49,7 @@ public:
 
     double ConvertOrientation(geometry_msgs::Quaternion quat);
 
-    std::array<std::tuple<float, float>, 4> MiniControl(float x, float y, float angle, float a, float ratio = 0.5);
+    std::array<std::tuple<float, float>, 4> MinorControl(float x, float y, float angle, float a, float ratio = 0.5);
 
     double* ReturnTargetVector();
 
@@ -57,10 +58,6 @@ public:
     void UpdateGoal();
 
     double* ReturnLocation();
-
-    void CalcVelocities();
-
-    double* ReturnDistances();
 
     void GPSCallback(const sensor_msgs::NavSatFix msg);
 
@@ -73,7 +70,6 @@ private:
     ros::NodeHandle node; // ROS node handler
     double location[2];   //x and y pos of robot center
     float heading;    //heading of front of the robot 
-    //std::vector<std::array<double, 3>> goals;  //location of goal positions
     double goal[3];
     double linear_acc[2] = {0,0};
     double rec_linear_acc[2] = {0,0};
@@ -89,7 +85,6 @@ private:
     ros::Subscriber goal_node;
     ros::Publisher thrusters_pub[8];
     ros::Publisher goal_reached_pub;
-
 };
 
 #endif
