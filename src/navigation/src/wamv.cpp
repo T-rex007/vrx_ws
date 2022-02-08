@@ -9,7 +9,7 @@ WAMV::WAMV(ros::NodeHandle *node_handle)
     gps = node.subscribe("/wamv/sensors/gps/gps/fix", QUEUE, &WAMV::GPSCallback, this);
     imu = node.subscribe("/wamv/sensors/imu/imu/data", QUEUE, &WAMV::IMUCallback, this);
 
-    // Initialise publishers
+    // Initialise goal and thrusters publishers
     goal_reached_pub = node.advertise<std_msgs::Bool>("/navigation/goal_reached", QUEUE);
 
     thrusters_pub[0] = node.advertise<std_msgs::Float32>("/wamv/thrusters/left_front_thrust_cmd", QUEUE);
