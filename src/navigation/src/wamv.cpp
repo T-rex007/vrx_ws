@@ -123,6 +123,7 @@ void WAMV::UpdateAngle()
     target[1] = temp[0] * cos(M_PI*(heading/180)) + temp[1] * sin(M_PI*(heading/180));   
     target[0] = -temp[1] * cos(M_PI*(heading/180)) + temp[0] * sin(M_PI*(heading/180));
 
+
     distance = sqrt(std::pow(target[0], 2) + std::pow(target[1], 2));
 
     // Angle between euclidean distance vector and north reference in degrees

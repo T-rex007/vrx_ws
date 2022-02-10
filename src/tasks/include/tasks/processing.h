@@ -6,6 +6,8 @@
 #include <std_msgs/Bool.h>
 #include <geographic_msgs/GeoPoseStamped.h>
 #include <geographic_msgs/GeoPath.h>
+#include <geometry_msgs/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <sensor_msgs/NavSatFix.h>
 
 #include <limits>
@@ -38,6 +40,15 @@ public:
     /// @brief Function to get the distance matrix and optimize the goal pathing
     void GetMatrix();
 
+    /// @brief circle object
+    std::vector<std::array<float, 3>> Circle(double center[2], int num_pts, float r, double ref0 = 0, double ref1 = 0);
+
+    ///@brief converts x and y with wamv ref to vector of geostamped
+    void CarttoGeo(std::vector<std::array<float, 3>> points, double x, double y);
+
+    ///@brief gets minigoal points based on obstacle encountered
+    void Special(std::string obstacle, double center[2]);
+
     /// @brief Callback function for tasks subscriber
     void TasksCallback(const vrx_gazebo::Task msg);
 
@@ -54,20 +65,23 @@ public:
     void GPSCallback(const sensor_msgs::NavSatFix msg);
 
 private:
-    ros::NodeHandle node;                       // ROS node handler
-    ros::Subscriber gps;                        // ROS subscriber for GPS topic
-    ros::Subscriber tasksSub;                   // ROS subscriber for tasks info topic
-    ros::Subscriber goalT1Sub;                  // ROS subcriber for goal topic in task 1
-    ros::Subscriber goalT2Sub;                  // ROS subcriber for goal topic in task 2
-    ros::Subscriber goalReachedSub;             // ROS subcriber to determine if the wamv reached its goal
-    ros::Publisher goalPub;                     // ROS Publisher for goal pose
-    geographic_msgs::GeoPoseStamped goal;       // Stores goal message for task 1
-    geographic_msgs::GeoPath waypoints;         // Stores waypoints message for task 2
-    int waypointsNo;                            // Keeps track of the number of waypoints
-    int goalNo;                                 // Keeps track of the current goal
-    double location[2];                         // X and Y position of WAMV center
-    std::vector<float> path;                    // 
-    std_msgs::Bool goalReachedFlag;             // Boolean to indicate if the wamv reached the goal
+
+    ros::NodeHandle node; // ROS node handler
+    ros::Subscriber gps;
+    ros::Subscriber tasksSub; // ROS subscriber for tasks info topic
+    ros::Subscriber goalT1Sub; // ROS subcriber for goal topic in task 1
+    ros::Subscriber goalT2Sub; // ROS subcriber for goal topic in task 2
+    ros::Subscriber goalReachedSub; // ROS subcriber to determine if the wamv reached its goal
+    ros::Publisher goalPub; // ROS Publisher for goal pose
+    geographic_msgs::GeoPoseStamped goal; // Stores goal message for task 1
+    geographic_msgs::GeoPath waypoints; // Stores waypoints message for task 2
+    int waypointsNo; // Keeps track of the number of waypoints
+    int goalNo; // Keeps track of the current goal
+    double location[2];   //x and y pos of robot center
+    geographic_msgs::GeoPath minigoals;  //subgoals that may need to be achieved to specify details of a path (investigate appending to waypoints)
+    int minigoalNo;  // Keeps track of the current mini goal
+    std::vector<float> path;
+    std_msgs::Bool goalReachedFlag; // Boolean to indicate if the wamv reached the goal
 };
 
 #endif
