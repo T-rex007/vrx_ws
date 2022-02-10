@@ -4,8 +4,8 @@
 
 #define SAMPLE 30                   // sample rate of PID loops
 
-#define SENSITIVITY_DISTANCE 0.5    // 0.5 meters distance sensitivity
-#define SENSITIVITY_ANGLE 2         // 2 degrees angle sensitivity
+#define SENSITIVITY_DISTANCE 2      // 0.5 meters distance sensitivity
+#define SENSITIVITY_ANGLE 20         // 2 degrees angle sensitivity
 
 int main(int argc, char **argv)
 {
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
             O_a = major.Compute(calculated);
             thrusters = boat.MajorControl(O_a, 45);
         }
-        else if (distance > SENSITIVITY_DISTANCE)
+        else if ((distance > SENSITIVITY_DISTANCE) || (abs(boat.CalcAngle()) > SENSITIVITY_ANGLE))
         {
             calculated = boat.CalcAngle(); 
 
@@ -161,17 +161,17 @@ int main(int argc, char **argv)
 
             thrusters = boat.MinorControl(O_x, O_y, O_a, 3.5); 
         }
-        else if (abs(calculated) < SENSITIVITY_ANGLE)
+        else
         {
             boat.GoalReached(true);
         }
 
-        ROS_INFO("head: %s", std::to_string(head).c_str());
-        ROS_INFO("gx: %s", std::to_string(goal[2]).c_str());
-        ROS_INFO("target angle: %s", std::to_string(boat.ReturnTargetAngle()).c_str());
-        ROS_INFO("tx: %s", std::to_string(target_vector[0]).c_str());
-        ROS_INFO("ty: %s", std::to_string(target_vector[1]).c_str());
-        ROS_INFO("distance: %s", std::to_string(distance).c_str());
+        // ROS_INFO("head: %s", std::to_string(head).c_str());
+        // ROS_INFO("gx: %s", std::to_string(goal[2]).c_str());
+        // ROS_INFO("angle diff: %s", std::to_string(boat.CalcAngle()).c_str());
+        // ROS_INFO("tx: %s", std::to_string(target_vector[0]).c_str());
+        // ROS_INFO("ty: %s", std::to_string(target_vector[1]).c_str());
+        // ROS_INFO("distance: %s", std::to_string(distance).c_str());
 
         boat.UpdateThruster(thrusters);
   

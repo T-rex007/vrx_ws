@@ -261,13 +261,6 @@ void Processing::Special(std::string obstacle, double center[2])
     CarttoGeo(points, temp, temp2);
 }
 
-/// @brief Publish the correct messages based on the task
-void Processing::PublishMessages()
-{
-    goalPub.publish(goal);
-}
-
-
 /// @brief Callback function for tasks subscriber
 void Processing::TasksCallback(const vrx_gazebo::Task msg)
 {
@@ -295,7 +288,7 @@ void Processing::GoalT2Callback(const geographic_msgs::GeoPath msg)
     GetMatrix();
   
     ROS_INFO("current: %s", std::to_string(path.at(goalNo) - 1).c_str());
-    goal = waypoints.poses[path.at(goalNo) - 1];
+    goal = waypoints.poses[path.at(goalNo)-1];
     double pos[2] = {goal.pose.position.longitude, goal.pose.position.latitude};
     Special("turtle", pos);
     goal = minigoals.poses[minigoalNo];
@@ -319,15 +312,15 @@ void Processing::GoalReachedCallback(const std_msgs::Bool msg)
                 minigoalNo++;
                 goal = minigoals.poses[minigoalNo];
                 PublishMessages();
-            }else if (goalNo != (waypointsNo))
+            }else if (goalNo != (waypointsNo - 1))
             {
+                goalNo++;
                 ROS_INFO("GoalReached Callback: goal achieved");
                 ROS_INFO("Goal: %s", std::to_string(path.at(goalNo) - 1).c_str());
-                goal = waypoints.poses[path.at(goalNo) - 1];
+                goal = waypoints.poses[path.at(goalNo)-1];
                 double pos[2] = {goal.pose.position.longitude, goal.pose.position.latitude};
                 Special("turtle", pos);
                 PublishMessages();
-                goalNo++;
             }
             else
             {
