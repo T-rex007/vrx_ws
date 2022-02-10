@@ -169,7 +169,6 @@ int main(int argc, char **argv)
         ROS_INFO("head: %s", std::to_string(head).c_str());
         ROS_INFO("gx: %s", std::to_string(goal[2]).c_str());
         ROS_INFO("target angle: %s", std::to_string(boat.ReturnTargetAngle()).c_str());
-        // ROS_INFO("difference: %s", std::to_string(boat.CalcRef()).c_str());
         ROS_INFO("tx: %s", std::to_string(target_vector[0]).c_str());
         ROS_INFO("ty: %s", std::to_string(target_vector[1]).c_str());
         ROS_INFO("distance: %s", std::to_string(distance).c_str());
