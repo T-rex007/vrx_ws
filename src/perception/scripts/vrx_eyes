@@ -19,6 +19,8 @@ import json
 
 class VrxEyes(object):
     def __init__(self):
+        self.countGps = 0
+        self.countLidar = 0
         self.wamv_postition = None
         self.wamv_x_global = None
         self.wamv_y_global = None
@@ -32,9 +34,12 @@ class VrxEyes(object):
             Args:
             Returns:
         """
-        rospy.loginfo("Lidar Data")
         self.lidar_frame = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(msg)
-        rospy.loginfo(self.lidar_frame.shape)
+        self.countLidar += 1
+        if(self.countLidar%2 == 0):
+            rospy.loginfo("Lidar Data")
+            rospy.loginfo(self.lidar_frame.shape)
+            self.getCentroid()
 
     def gpsCallback(self, msg):
         """
@@ -42,9 +47,11 @@ class VrxEyes(object):
             Args:
             Returns:
         """
-        rospy.loginfo("GPS Data")
-        rospy.loginfo(msg)
         self.wamv_postition = msg
+        self.countGps += 1
+        if(self.countGps%2 == 0):
+            rospy.loginfo("GPS Data")
+            rospy.loginfo(msg)
         
     def sensorListener(self):
         """
@@ -66,7 +73,6 @@ class VrxEyes(object):
     
     def Talker(self):
         object_centroids = self.getCentroid()
-        for center
         self.object_pose_pub.publish(self.objects)
         
     def getCentroid(self):
@@ -75,7 +81,7 @@ class VrxEyes(object):
             Args:
             Returns:
         """
-        db = DBSCAN(eps = 0.2,metric="euclidean", min_samples = 10)
+        db = DBSCAN(eps = 0.3,metric = "euclidean", min_samples = 30, algorithm = "brute")
         preds = db.fit_predict(self.lidar_frame)
         n_clusters = len(set(preds)) - (1 if -1 in preds else 0)
         n_noise_pts = list(preds).count(-1)
@@ -88,9 +94,11 @@ class VrxEyes(object):
         for c_id in range(n_clusters):
             cluster_points_indexes = [ i for i in range(len(list(preds))) if preds[i] ==c_id]
             centroid =np.sum(self.lidar_frame[cluster_points_indexes], axis = 0)/(len(cluster_points_indexes))
+            # temp = centroid[1]
+            # centroid[1] = centroid[2]
+            # centroid[2] = temp
             centroids.append(centroid)
-            self.objects[""]
-            rospy.loginfo("Centroid : {} {}".format(c_id, centroid))        
+            rospy.loginfo("Centroid : {} {}".format(c_id, centroid))       
         return centroids
     
     def detectObjects(self):
