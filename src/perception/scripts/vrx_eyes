@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+
+import rospy
+import numpy as np
+from sklearn.cluster import DBSCAN 
+from sensor_msgs.msg import PointCloud2, NavSatFix
+from std_msgs.msg import String
+
+import ctypes
+import struct
+import os 
+import sys
+import pcl
+import ros_numpy
+import json
+
+# from sklearn.neighbors import KDTree
+# from sklearn.cluster import DBSCAN 
+
+class VrxEyes(object):
+    def __init__(self):
+        self.wamv_postition = None
+        self.wamv_x_global = None
+        self.wamv_y_global = None
+        self.lidar_frame = None
+        self.objects = {"Object":[], "Relative Position":[], "Global Position": []}
+        self.object_pose_pub = rospy.Publisher('/Wamv/Peception/RelativeAndGlobalObjectPose', String, queue_size=10)
+        
+    def lidarCallback(self, msg):
+        """
+            <Description>
+            Args:
+            Returns:
+        """
+        rospy.loginfo("Lidar Data")
+        self.lidar_frame = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(msg)
+        rospy.loginfo(self.lidar_frame.shape)
+
+    def gpsCallback(self, msg):
+        """
+            <Description>
+            Args:
+            Returns:
+        """
+        rospy.loginfo("GPS Data")
+        rospy.loginfo(msg)
+        self.wamv_postition = msg
+        
+    def sensorListener(self):
+        """
+            Subcriber for the lidar and GPS topics
+            Args:
+            Returns:
+        """
+        rospy.loginfo("Listening")
+        rospy.Subscriber("/wamv/sensors/lidars/lidar_wamv/points",
+                         data_class = PointCloud2, callback = self.lidarCallback
+                         )
+        rospy.Subscriber("/wamv/sensors/gps/gps/fix",data_class = NavSatFix,
+                         callback = self.gpsCallback
+                         )
+        # rospy.Subscriber("/wamv/sensors/imu/imu/data",data_class = PointCloud2, callback = self.lidarCallback)
+        # rospy.Subscriber("/wamv/sensors/imu/imu/data",data_class = PointCloud2, callback = self.lidarCallback)
+        # rospy.Subscriber("/wamv/sensors/imu/imu/data",data_class = PointCloud2, callback = self.lidarCallback
+        
+    
+    def Talker(self):
+        object_centroids = self.getCentroid()
+        for center
+        self.object_pose_pub.publish(self.objects)
+        
+    def getCentroid(self):
+        """
+            <Description>
+            Args:
+            Returns:
+        """
+        db = DBSCAN(eps = 0.2,metric="euclidean", min_samples = 10)
+        preds = db.fit_predict(self.lidar_frame)
+        n_clusters = len(set(preds)) - (1 if -1 in preds else 0)
+        n_noise_pts = list(preds).count(-1)
+        rospy.loginfo("Number of Noisy points: {}".format(n_noise_pts))
+        rospy.loginfo("Number of clusters: {}".format(n_clusters))
+
+
+        centroids = []
+        c_id =0
+        for c_id in range(n_clusters):
+            cluster_points_indexes = [ i for i in range(len(list(preds))) if preds[i] ==c_id]
+            centroid =np.sum(self.lidar_frame[cluster_points_indexes], axis = 0)/(len(cluster_points_indexes))
+            centroids.append(centroid)
+            self.objects[""]
+            rospy.loginfo("Centroid : {} {}".format(c_id, centroid))        
+        return centroids
+    
+    def detectObjects(self):
+        pass
+
+def main():
+    Vrx = VrxEyes()
+    Vrx.sensorListener()
+    rospy.init_node("vrx_eyes")
+    rospy.loginfo(np.__version__)
+    rospy.loginfo(sys.path[1])
+    rospy.spin()
+
+if (__name__ == '__main__'):
+    main()
+    
+

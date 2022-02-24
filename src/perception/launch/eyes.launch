@@ -1,10 +1,8 @@
 <launch>
-
     <node
-        name="data_collection"
+        name="Vrx_Eyes"
         pkg="perception"
-        type="data_collection"
+        type="vrx_eyes"
         respawn="false"
         output="screen"/>
-        
 </launch>
