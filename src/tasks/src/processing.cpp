@@ -136,10 +136,10 @@ void Processing::GetMatrix()
 /// @brief circle object
 std::vector<std::array<float, 3>> Processing::Circle(double center[2], int num_pts, float r, double ref0, double ref1)
 {
-    // ROS_INFO("Circle");
     // Calculate eqn of line
     float m = (center[1] - ref1) / (center[0] - ref0);
     float intercept = center[1] - (m*center[0]);
+    // ROS_INFO("intercept: %s", std::to_string(intercept).c_str());
 
     // Sub y into x and determine a,b,c for quadratic formula 
     float a = (m*m) + 1;
@@ -172,7 +172,7 @@ std::vector<std::array<float, 3>> Processing::Circle(double center[2], int num_p
     }
     // ROS_INFO("circle check 1");
     // Calculate starting/offset angle based on point of intersection
-    float offset_angle = ((atan2(y - center[1], x - center[0])) * (180 / M_PI)) - 90;
+    float offset_angle = ((atan2(x - center[0], y - center[1])) * (180 / M_PI)) - 90;
 
     if(offset_angle < 0)
     {
@@ -210,8 +210,6 @@ void Processing::CarttoGeo(std::vector<std::array<float, 3>> points, double x, d
 
     for(int i = 0; i < points.size(); i++)
     {
-        ROS_INFO("gol1: %s", std::to_string((points.at(i))[0]).c_str());
-        ROS_INFO("gol2: %s", std::to_string((points.at(i))[1]).c_str());
         temp.pose.position.longitude = ((points.at(i))[0]/(6371000*M_PI/180)) + x;
         temp.pose.position.latitude = ((points.at(i))[1]/(6371000*M_PI/180)) + y;
         temp.pose.position.altitude = i;
@@ -244,11 +242,15 @@ void Processing::Special(std::string obstacle, double center[2])
 
     converted[0] = (center[0] - temp)*6371000*M_PI/180;
     converted[1] = (center[1] - temp2)*6371000*M_PI/180;
-    ROS_INFO("center1: %s", std::to_string(converted[0]).c_str());
-    ROS_INFO("center2: %s", std::to_string(converted[1]).c_str());
     std::vector<std::array<float, 3>> points = Circle(converted, 10, 7);
     // ROS_INFO("after circle");
     points.push_back(points.at(0));
+    
+    // for(int i = 0; i < 10; i++)
+    // {
+    //     ROS_INFO("pt %s x: %s", std::to_string(i).c_str(), std::to_string(points.at(i)[0]).c_str());
+    //     ROS_INFO("pt %s y: %s", std::to_string(i).c_str(), std::to_string(points.at(i)[1]).c_str());
+    // }
 
     if(obstacle == "platypus")
     {
@@ -321,6 +323,7 @@ void Processing::GoalReachedCallback(const std_msgs::Bool msg)
                 double pos[2] = {goal.pose.position.longitude, goal.pose.position.latitude};
                 Special("turtle", pos);
                 PublishMessages();
+                goal = minigoals.poses[minigoalNo];
             }
             else
             {
