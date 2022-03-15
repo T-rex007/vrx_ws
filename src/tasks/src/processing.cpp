@@ -31,9 +31,19 @@ void Processing::InitSubsAndPubs()
         goalReachedSub = node.subscribe("/navigation/goal_reached", QUEUE, &Processing::GoalReachedCallback, this);
     }
 
-    if (taskName == "perception") {}
+    if (taskName == "perception"){}
 
-    if (taskName == "wildlife") {}
+    if (taskName == "wildlife")
+    {
+        goalT4Sub = node.subscribe("/vrx/wildlife/animals/poses", QUEUE, &Processing::GoalT4Callback, this);
+        goalReachedSub = node.subscribe("/navigation/goal_reached", QUEUE, &Processing::GoalReachedCallback, this);
+        minigoalNo = 0;
+        goalNo = 0;
+        waypointsNo = 0;
+        obstacleNo = 0;
+        flag = true;
+        flag2 = true;
+    }
 
     if (taskName == "gymkhana") {}
 
@@ -83,7 +93,7 @@ std::vector<float> Processing::GoalSort(std::vector<std::vector<float>> matrix, 
 }
 
 /// @brief Function to get the distance matrix and optimize the goal pathing
-void Processing::GetMatrix()
+void Processing::GetMatrix(geographic_msgs::GeoPath road)
 {
 
     geographic_msgs::GeoPath temp;
@@ -99,14 +109,14 @@ void Processing::GetMatrix()
 
     for(int i = 0; i < waypointsNo; i++)
     {
-        gal[0] = waypoints.poses[i].pose.position.longitude;
-        gal[1] = waypoints.poses[i].pose.position.latitude;
+        gal[0] = road.poses[i].pose.position.longitude;
+        gal[1] = road.poses[i].pose.position.latitude;
         goals.push_back(gal);
     }
 
     for(int i = 0; i <= waypointsNo; i++)
     {
-
+        // ROS_INFO("row: %s", std::to_string(i).c_str());
         row.clear();
 
         for(int x = 0; x <= waypointsNo; x++)
@@ -114,7 +124,7 @@ void Processing::GetMatrix()
             goal_vector[0] = ((goals.at(i))[0] - (goals.at(x))[0])*6371000*M_PI/180;
             goal_vector[1] = ((goals.at(i))[1] - (goals.at(x))[1])*6371000*M_PI/180;
             distance = sqrt(std::pow(goal_vector[0], 2) + std::pow(goal_vector[1], 2));
-
+            // ROS_INFO("dist: %s", std::to_string(distance).c_str());
             row.push_back(distance);
         }
 
@@ -134,7 +144,7 @@ void Processing::GetMatrix()
 
 
 /// @brief circle object
-std::vector<std::array<float, 3>> Processing::Circle(double center[2], int num_pts, float r, double ref0, double ref1)
+std::vector<std::array<double, 3>> Processing::Circle(double center[2], int num_pts, float r, double ref0, double ref1)
 {
     // Calculate eqn of line
     float m = (center[1] - ref1) / (center[0] - ref0);
@@ -182,15 +192,24 @@ std::vector<std::array<float, 3>> Processing::Circle(double center[2], int num_p
         offset_angle = M_PI*((360 - offset_angle) / 180);
     }
 
+    if(flag)
+    {
+        offset = offset_angle;
+        flag = false;
+    }else
+    {
+        offset_angle = offset;
+    }
+
     // Calculate equal angle segments
     float angle = (360 / num_pts) * (M_PI/180);
 
     // Generate specified number of points(position and orientation)
-    std::vector<std::array<float, 3>> points;
+    std::vector<std::array<double, 3>> points;
     for(int i = 0; i < num_pts; i++)
     {
-        float pos_x = (r * cos((i*angle) + offset_angle)) + center[0];
-        float pos_y = (r * sin((i*angle) + offset_angle)) + center[1];
+        double pos_x = (r * cos((i*angle) + offset_angle)) + center[0];
+        double pos_y = (r * sin((i*angle) + offset_angle)) + center[1];
         float ang =  ((((i * angle) + offset_angle) * 180 / M_PI) + 180);
         ang = fmod(ang, 360);
 
@@ -200,20 +219,23 @@ std::vector<std::array<float, 3>> Processing::Circle(double center[2], int num_p
 }
 
 ///@brief converts x and y with wamv ref to vector of geostamped
-void Processing::CarttoGeo(std::vector<std::array<float, 3>> points, double x, double y)
+std::vector<geographic_msgs::GeoPoseStamped> Processing::CarttoGeo(std::vector<std::array<double, 3>> points, double x[2])
 {
     // ROS_INFO("convert");
     geographic_msgs::GeoPoseStamped temp;
+    std::vector<geographic_msgs::GeoPoseStamped> vec;
     double yaw;
     tf2::Quaternion q;
     geometry_msgs::Quaternion quat;
 
     for(int i = 0; i < points.size(); i++)
     {
-        temp.pose.position.longitude = ((points.at(i))[0]/(6371000*M_PI/180)) + x;
-        temp.pose.position.latitude = ((points.at(i))[1]/(6371000*M_PI/180)) + y;
+        temp.pose.position.longitude = ((points.at(i))[0]/(6371000*M_PI/180)) + x[0];
+        temp.pose.position.latitude = ((points.at(i))[1]/(6371000*M_PI/180)) + x[1];
         temp.pose.position.altitude = i;
         yaw = (points.at(i))[2];
+        // ROS_INFO("%s angle", std::to_string(yaw).c_str());
+        
         
         if(yaw > 180)
         {
@@ -225,8 +247,118 @@ void Processing::CarttoGeo(std::vector<std::array<float, 3>> points, double x, d
         quat = tf2::toMsg(q);
 
         temp.pose.orientation = quat;
-        minigoals.poses.push_back(temp);
+        vec.push_back(temp);
     }
+
+    return vec;
+}
+
+/// @brief circle object
+std::vector<std::array<double, 3>> Processing::avoidC(double center[2], double gal[2],float r)
+{
+    float m = center[1]/ center[0];
+    float a = (m*m) + 1;
+    float b = (-2*center[1]*m) + (-2*center[0]);
+    float c = std::pow(center[0], 2) + std::pow(center[1], 2) - std::pow(r, 2);
+    float x1 = (-b + sqrt(std::pow(b, 2) - (4 * a * c))) / (2 * a);
+    float x2 = (-b - sqrt(std::pow(b, 2) - (4 * a * c))) / (2 * a);
+    float y1 = (m * x1);
+    float y2 = (m * x2);
+    float dist1 = sqrt(std::pow((x1), 2) + std::pow((y1), 2));
+    float dist2 = sqrt(std::pow((x2), 2) + std::pow((y2), 2));
+    float x = 0;
+    float y = 0;
+
+    if(dist1 < dist2)
+    {
+        x = x1;
+        y = y1;
+    }else
+    {
+        x = x2;
+        y = y2;
+    }
+    
+    float offset_angle = ((atan2(x - center[0], y - center[1])) * (180 / M_PI)) - 90;
+
+    if(offset_angle < 0)
+    {
+        offset_angle = M_PI*(-offset_angle / 180);
+    }else
+    {
+        offset_angle = M_PI*((360 - offset_angle) / 180);
+    }
+
+    std::vector<std::array<double, 3>> points;
+    double pos_x = (r * cos(offset_angle)) + center[0];
+    double pos_y = (r * sin(offset_angle)) + center[1];
+    float ang =  (((offset_angle) * 180 / M_PI) + 180);
+    ang = fmod(ang, 360);
+    points.push_back({pos_x, pos_y, ang});
+
+    m = gal[1]/ gal[0];
+    a = (m*m) + 1;
+    b = (-2*gal[1]*m) + (-2*gal[0]);
+    c = std::pow(gal[0], 2) + std::pow(gal[1], 2) - std::pow(r, 2);
+    x1 = (-b + sqrt(std::pow(b, 2) - (4 * a * c))) / (2 * a);
+    x2 = (-b - sqrt(std::pow(b, 2) - (4 * a * c))) / (2 * a);
+    y1 = (m * x1);
+    y2 = (m * x2);
+    dist1 = sqrt(std::pow((x1), 2) + std::pow((y1), 2));
+    dist2 = sqrt(std::pow((x2), 2) + std::pow((y2), 2));
+    x = 0;
+    y = 0;
+
+    if(dist1 < dist2)
+    {
+        x = x1;
+        y = y1;
+    }else
+    {
+        x = x2;
+        y = y2;
+    }
+    
+    offset_angle = ((atan2(x - gal[0], y - gal[1])) * (180 / M_PI)) - 90;
+
+    if(offset_angle < 0)
+    {
+        offset_angle = M_PI*(-offset_angle / 180);
+    }else
+    {
+        offset_angle = M_PI*((360 - offset_angle) / 180);
+    }
+
+    pos_x = (r * cos(offset_angle)) + center[0];
+    pos_y = (r * sin(offset_angle)) + center[1];
+    ang =  (((offset_angle) * 180 / M_PI) + 180);
+    ang = fmod(ang, 360);
+    points.push_back({pos_x, pos_y, ang});
+
+
+    return points;
+}
+
+///@brief gets minigoal points based on obstacle encountered
+void Processing::avoid(double center[2], double temp[2], float r)
+{
+    obstway.poses.clear();
+    double goal_vector[2];
+    tempgoal[0] = goalNo;
+    tempgoal[1] = minigoalNo;
+
+    if(minigoals.poses.size() > 0)
+    {
+        goal_vector[0] = (minigoals.poses[minigoalNo].pose.position.longitude - temp[0])*6371000*M_PI/180;
+        goal_vector[1] = (minigoals.poses[minigoalNo].pose.position.latitude - temp[0])*6371000*M_PI/180;
+    }else
+    {
+        goal_vector[0] = (waypoints.poses[goalNo].pose.position.longitude - temp[0])*6371000*M_PI/180;
+        goal_vector[1] = (waypoints.poses[goalNo].pose.position.latitude - temp[0])*6371000*M_PI/180;
+    }
+
+    std::vector<std::array<double, 3>> points = avoidC(center, goal_vector, r);
+    obstway.poses = CarttoGeo(points, temp);
 }
 
 ///@brief gets minigoal points based on obstacle encountered
@@ -234,15 +366,17 @@ void Processing::Special(std::string obstacle, double center[2])
 {
     // ROS_INFO("special");
     minigoals.poses.clear();
-    minigoalNo = 0;
     double converted[2];
     double ref[2];
-    double temp = location[0];
-    double temp2 = location[1];
+    double temp[2]; 
+    temp[0] = location[0];
+    temp[1] = location[1];
 
-    converted[0] = (center[0] - temp)*6371000*M_PI/180;
-    converted[1] = (center[1] - temp2)*6371000*M_PI/180;
-    std::vector<std::array<float, 3>> points = Circle(converted, 10, 7);
+    converted[0] = (center[0] - temp[0])*6371000*M_PI/180;
+    converted[1] = (center[1] - temp[1])*6371000*M_PI/180;
+    // ROS_INFO("x: %s", std::to_string(converted[0]).c_str());
+    // ROS_INFO("y: %s", std::to_string(converted[1]).c_str());
+    std::vector<std::array<double, 3>> points = Circle(converted, 10, 7);
     // ROS_INFO("after circle");
     points.push_back(points.at(0));
     
@@ -254,13 +388,9 @@ void Processing::Special(std::string obstacle, double center[2])
 
     if(obstacle == "platypus")
     {
-        
-    }else if(obstacle == "crocodile")
-    {
-
+        std::reverse(points.begin(), points.end());
     }
-    // ROS_INFO("before cart");
-    CarttoGeo(points, temp, temp2);
+    minigoals.poses = CarttoGeo(points, temp);
 }
 
 /// @brief Callback function for tasks subscriber
@@ -285,17 +415,54 @@ void Processing::GoalT2Callback(const geographic_msgs::GeoPath msg)
 {
     waypoints = msg;
     waypointsNo = waypoints.poses.size();
-    goalNo = 0;
-    
-    GetMatrix();
-  
-    ROS_INFO("current: %s", std::to_string(path.at(goalNo) - 1).c_str());
+    goalNo = 0;   
+    GetMatrix(waypoints);
     goal = waypoints.poses[path.at(goalNo)-1];
-    double pos[2] = {goal.pose.position.longitude, goal.pose.position.latitude};
-    Special("turtle", pos);
-    goal = minigoals.poses[minigoalNo];
+    PublishMessages();
+    ROS_INFO("GoalT2 Callback: %s Waypoints", std::to_string(path.at(goalNo)-1).c_str());
+}
 
-    ROS_INFO("GoalT2 Callback: %s Waypoints", std::to_string(waypointsNo).c_str());
+/// @brief Callback function for goal subscriber in task 4
+void Processing::GoalT4Callback(const geographic_msgs::GeoPath msg)
+{
+    std::vector<geographic_msgs::GeoPoseStamped> tempway;
+    geographic_msgs::GeoPoseStamped temp;
+    double goal_vector[2];
+    float distance = 0;
+
+    for(int i = 0; i < msg.poses.size(); i++)
+    {
+        if(msg.poses[i].header.frame_id != "platypus")
+        {
+            tempway.push_back(msg.poses[i]);
+        }else
+        {
+            temp = msg.poses[i];
+            goal_vector[0] = (temp.pose.position.longitude - location[0])*6371000*M_PI/180;
+            goal_vector[1] = (temp.pose.position.latitude - location[1])*6371000*M_PI/180;
+            distance = sqrt(std::pow(goal_vector[0], 2) + std::pow(goal_vector[1], 2));
+            if(distance < 10)
+            {
+                avoid(goal_vector, location, 15);
+                obstacleNo = 0;
+                goal = obstway.poses[obstacleNo];
+                PublishMessages();
+            }
+        }
+    }
+
+    waypoints.poses = tempway;
+    waypointsNo = waypoints.poses.size();
+    if(flag2)
+    {
+        GetMatrix(waypoints);
+        temp = waypoints.poses[path.at(goalNo)-1];
+        double pos[2] = {temp.pose.position.longitude, temp.pose.position.latitude};
+        Special(temp.header.frame_id, pos);
+        goal = minigoals.poses[minigoalNo];
+        PublishMessages();
+    }
+    flag2 = false ;   
 }
 
 /// @brief Callback function to indicate the wamv reached the goal
@@ -307,27 +474,69 @@ void Processing::GoalReachedCallback(const std_msgs::Bool msg)
     {
         if(goalReachedFlag.data)
         {
-            // ROS_INFO("GoalNo: %s", std::to_string(goalNo).c_str());
-            if(minigoalNo < minigoals.poses.size()-1)
-            {
-                ROS_INFO("GoalReached Callback: goal achieved");
-                minigoalNo++;
-                goal = minigoals.poses[minigoalNo];
-                PublishMessages();
-            }else if (goalNo != (waypointsNo - 1))
+            if (goalNo < (waypointsNo - 1))
             {
                 goalNo++;
                 ROS_INFO("GoalReached Callback: goal achieved");
                 ROS_INFO("Goal: %s", std::to_string(path.at(goalNo) - 1).c_str());
-                goal = waypoints.poses[path.at(goalNo)-1];
-                double pos[2] = {goal.pose.position.longitude, goal.pose.position.latitude};
-                Special("turtle", pos);
-                PublishMessages();
-                goal = minigoals.poses[minigoalNo];
+                // goal = waypoints.poses[path.at(goalNo)-1];
+                // PublishMessages();
             }
             else
             {
                 ROS_INFO("GoalReached Callback: last goal achieved");
+            }
+        }
+    }else if(taskName == "wildlife" && taskState == "running")
+    {
+        if(goalReachedFlag.data)
+        {
+            float temp = obstway.poses.size();
+            float temp2 = minigoals.poses.size();
+            ROS_INFO("%s miniWaypoints", std::to_string(temp2 - 1).c_str());
+            ROS_INFO("%s minicurent", std::to_string(minigoalNo).c_str());
+            ROS_INFO("%s Waypoints", std::to_string(waypointsNo).c_str());
+            ROS_INFO("%s Waypointscurrent", std::to_string(goalNo).c_str());
+            ROS_INFO("%s obstackles", std::to_string(temp-1).c_str());
+            ROS_INFO("%s obstacklescurrrr", std::to_string(obstacleNo).c_str());
+
+            if(obstacleNo < temp -1)
+            {
+                ROS_INFO("obs");
+                obstacleNo++;
+                goal = obstway.poses[obstacleNo];
+                PublishMessages();
+                minigoalNo = tempgoal[1] - 1;
+                goalNo = tempgoal[0] - 1;
+                flag = true;
+            }else if(minigoalNo < (temp2-1))
+            {
+                ROS_INFO("GoalReached Callback: minigoal achieved");
+                minigoalNo++;
+                goal = minigoals.poses[minigoalNo];
+                // ROS_INFO("Goal: %s", std::to_string(goal.pose.position.latitude).c_str());
+                PublishMessages();
+            }else if(goalNo < (waypointsNo - 1))
+            {
+                ROS_INFO("Next animal");
+                minigoalNo = 0;
+                flag = true;
+                goalNo++;
+                goal = waypoints.poses[path.at(goalNo)-1];
+                double pos[2] = {goal.pose.position.longitude, goal.pose.position.latitude};
+                Special(goal.header.frame_id, pos);
+                goal = minigoals.poses[minigoalNo];
+                // ROS_INFO("Goal: %s", std::to_string(goal.pose.position.latitude).c_str());
+                PublishMessages();
+            }
+            else
+            {
+                ROS_INFO("GoalReached Callback: last goal achieved");
+                goal = waypoints.poses[path.at(goalNo)-1];
+                double pos[2] = {goal.pose.position.longitude, goal.pose.position.latitude};
+                Special(goal.header.frame_id, pos);
+                goal = minigoals.poses[minigoalNo];
+                PublishMessages();
             }
         }
     }

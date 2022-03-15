@@ -38,13 +38,18 @@ public:
     std::vector<float> GoalSort(std::vector<std::vector<float>> matrix, int current, std::vector<int> nodes);
 
     /// @brief Function to get the distance matrix and optimize the goal pathing
-    void GetMatrix();
+    void GetMatrix(geographic_msgs::GeoPath road);
 
     /// @brief circle object
-    std::vector<std::array<float, 3>> Circle(double center[2], int num_pts, float r, double ref0 = 0, double ref1 = 0);
+    std::vector<std::array<double, 3>> Circle(double center[2], int num_pts, float r, double ref0 = 0, double ref1 = 0);
+
+    /// @brief circle object
+    std::vector<std::array<double, 3>> avoidC(double center[2], double gal[2], float r);
+
+    void avoid(double center[2], double temp[2], float r);
 
     ///@brief converts x and y with wamv ref to vector of geostamped
-    void CarttoGeo(std::vector<std::array<float, 3>> points, double x, double y);
+    std::vector<geographic_msgs::GeoPoseStamped> CarttoGeo(std::vector<std::array<double, 3>> points, double x[2]);
 
     ///@brief gets minigoal points based on obstacle encountered
     void Special(std::string obstacle, double center[2]);
@@ -57,6 +62,9 @@ public:
 
     /// @brief Callback function for goal subscriber in task 2
     void GoalT2Callback(const geographic_msgs::GeoPath msg);
+
+       /// @brief Callback function for goal subscriber in task 4
+    void GoalT4Callback(const geographic_msgs::GeoPath msg);
 
     /// @brief Callback function to indicate the wamv reached the goal
     void GoalReachedCallback(const std_msgs::Bool msg);
@@ -71,17 +79,24 @@ private:
     ros::Subscriber tasksSub; // ROS subscriber for tasks info topic
     ros::Subscriber goalT1Sub; // ROS subcriber for goal topic in task 1
     ros::Subscriber goalT2Sub; // ROS subcriber for goal topic in task 2
+    ros::Subscriber goalT4Sub; // ROS subcriber for goal topic in task 4
     ros::Subscriber goalReachedSub; // ROS subcriber to determine if the wamv reached its goal
     ros::Publisher goalPub; // ROS Publisher for goal pose
     geographic_msgs::GeoPoseStamped goal; // Stores goal message for task 1
-    geographic_msgs::GeoPath waypoints; // Stores waypoints message for task 2
+    geographic_msgs::GeoPath waypoints; // Stores waypoints message for task 2 and 4
+    geographic_msgs::GeoPath obstway;
     int waypointsNo; // Keeps track of the number of waypoints
     int goalNo; // Keeps track of the current goal
+    int obstacleNo; // Keeps track of the current goal
     double location[2];   //x and y pos of robot center
     geographic_msgs::GeoPath minigoals;  //subgoals that may need to be achieved to specify details of a path (investigate appending to waypoints)
     int minigoalNo;  // Keeps track of the current mini goal
     std::vector<float> path;
+    std::array<int, 2> tempgoal;
     std_msgs::Bool goalReachedFlag; // Boolean to indicate if the wamv reached the goal
+    bool flag;
+    bool flag2;
+    float offset;
 };
 
 #endif

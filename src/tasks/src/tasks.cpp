@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 
     // Perform processing during Ready State
     ROS_INFO("Tasks Package: processing in Ready State");
-    /* <-- Insert Code Here --> */
+    // process.Init();
     while (process.taskState == "ready"){ loop_rate.sleep(); }
 
     // Perform processing during Running State

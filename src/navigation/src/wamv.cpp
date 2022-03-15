@@ -164,8 +164,13 @@ double WAMV::ConvertOrientation(geometry_msgs::Quaternion quat)
     double roll;
     double pitch;
     double yaw;
-    tf::Quaternion q;
-    tf::quaternionMsgToTF(quat, q);
+    // tf::Quaternion q;
+    // tf::quaternionMsgToTF(quat, q);
+    tf::Quaternion q(
+        quat.x,
+        quat.y,
+        quat.z,
+        quat.w);
     tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
     yaw = yaw * 180.0 / M_PI; 
 

@@ -4,8 +4,8 @@
 
 #define SAMPLE 30                   // sample rate of PID loops
 
-#define SENSITIVITY_DISTANCE 2      // 0.5 meters distance sensitivity
-#define SENSITIVITY_ANGLE 20         // 2 degrees angle sensitivity
+#define SENSITIVITY_DISTANCE 3      // 0.5 meters distance sensitivity
+#define SENSITIVITY_ANGLE 360        // 2 degrees angle sensitivity
 
 int main(int argc, char **argv)
 {
@@ -47,6 +47,7 @@ int main(int argc, char **argv)
     float difference;
     float head;
     std::array<std::tuple<float, float>, 4> thrusters;
+    // int count = 0;
 
 
     /**************************PID INITIALIZATION**************************/
@@ -135,12 +136,13 @@ int main(int argc, char **argv)
         //ROS_INFO("ly: %s", std::to_string(location[1]).c_str());
         
         /// TODO: consider using raw target angle instead of difference
-        if (distance > 10)
+        if (distance > 15)
         {
             calculated = boat.CalcRef();
                 
             O_a = major.Compute(calculated);
-            thrusters = boat.MajorControl(O_a, 45);
+            thrusters = boat.MajorControl(O_a, 20);
+            // boat.GoalReached(false);
         }
         else if ((distance > SENSITIVITY_DISTANCE) || (abs(boat.CalcAngle()) > SENSITIVITY_ANGLE))
         {
@@ -159,19 +161,21 @@ int main(int argc, char **argv)
             // O_y = target_vector[1];
             // O_a = calculated;
 
-            thrusters = boat.MinorControl(O_x, O_y, O_a, 3.5); 
+            thrusters = boat.MinorControl(O_x, O_y, O_a, 3.5);
+            // boat.GoalReached(false);
         }
         else
         {
             boat.GoalReached(true);
         }
-
+        // if(count > 200){count = 0;
         // ROS_INFO("head: %s", std::to_string(head).c_str());
         // ROS_INFO("gx: %s", std::to_string(goal[2]).c_str());
         // ROS_INFO("angle diff: %s", std::to_string(boat.CalcAngle()).c_str());
-        // ROS_INFO("tx: %s", std::to_string(target_vector[0]).c_str());
-        // ROS_INFO("ty: %s", std::to_string(target_vector[1]).c_str());
+        // ROS_INFO("tx: %f", target_vector[0]);
+        // ROS_INFO("ty: %f", target_vector[1]);
         // ROS_INFO("distance: %s", std::to_string(distance).c_str());
+        // }else{count++;}
 
         boat.UpdateThruster(thrusters);
   
