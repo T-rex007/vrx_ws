@@ -432,7 +432,7 @@ void Processing::GoalT4Callback(const geographic_msgs::GeoPath msg)
 
     for(int i = 0; i < msg.poses.size(); i++)
     {
-        if(msg.poses[i].header.frame_id != "platypus")
+        if(msg.poses[i].header.frame_id != "crocodile")
         {
             tempway.push_back(msg.poses[i]);
         }else
@@ -479,8 +479,8 @@ void Processing::GoalReachedCallback(const std_msgs::Bool msg)
                 goalNo++;
                 ROS_INFO("GoalReached Callback: goal achieved");
                 ROS_INFO("Goal: %s", std::to_string(path.at(goalNo) - 1).c_str());
-                // goal = waypoints.poses[path.at(goalNo)-1];
-                // PublishMessages();
+                goal = waypoints.poses[path.at(goalNo)-1];
+                PublishMessages();
             }
             else
             {
