@@ -60,7 +60,8 @@ class DetectorTF2:
 					y_max = int(bboxes[idx][2] * im_height)
 					x_max = int(bboxes[idx][3] * im_width)
 					class_label = self.category_index[int(bclasses[idx])]['name']
-					bbox.append([x_min, y_min, x_max, y_max, class_label, float(bscores[idx])])
+
+					bbox.append([x_min, y_min, x_max, y_max, class_label, float(bscores[idx]), idx])
 		return bbox
 
 
@@ -148,12 +149,14 @@ class VrxEyes(object):
                   [s[1]/2+dst_size, s[0] - offset ],
                   [s[1]/2-dst_size, s[0] - offset ]]
                 )
+
         
         self.matrix = cv2.getPerspectiveTransform(self.ref_points, self.dst)
         # Object detection Model
         self.ssd_mobilenet_model = DetectorTF2(PATH_TO_SAVED_MODEL, 
                                                      LABEL_MAP_PATH, class_id=None, threshold=0.2)        
         
+
     def roverCentriCoordinate(self, point):
         c1, c2 = point
         s = (720, 1280, 3)
@@ -166,7 +169,24 @@ class VrxEyes(object):
     def computeRowAngle(self, rover_centric_coord):
         return np.arctan(rover_centric_coord[1]/rover_centric_coord[0])
     
-    def appendBoxCenterAndRowAngle(self, bboxes):
+
+    def covertBoxesToDictionary(self, bboxes):
+        out_dict = {}
+        for box in bboxes:
+            out_dict[box[6]] = {
+                "x_min": box[0],
+                "y_min": box[1],
+                "x_max": box[2],
+                "y_max": box[3],
+                "class_label": box[4],
+                "bscores": box[5],
+                "idx": box[6],
+                "row_angle": box[7],
+                "latitude": None,
+                "longitude": None,
+            }
+        return out_dict
+ def appendBoxCenterAndRowAngle(self, bboxes):
         """Return bboxes with center point added to bboxes
         args: 
             bboxes - 
@@ -199,8 +219,8 @@ class VrxEyes(object):
             rospy.loginfo(det_imag.shape) 
             image_message = self.bridge.cv2_to_imgmsg(det_imag, encoding="passthrough")
             self.detections_pub.publish(image_message)
-            rospy.loginfo(detections)
-            
+            rospy.loginfo(self.covertBoxesToDictionary(detections))
+     
                   
     def lidarCallback(self, msg):
         """
@@ -209,6 +229,8 @@ class VrxEyes(object):
             Returns:
         """
         self.lidar_frame = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(msg)
+        self.i = self.i + 1
+        np.save("/home/t-rex/vrx_ws/src/perception/debug_lidar_frames/numfile{}.npy".format(self.i),self.lidar_frame)
         self.countLidar += 1
         if(self.countLidar%2 == 0):
             rospy.loginfo("Lidar Data")
@@ -246,6 +268,8 @@ class VrxEyes(object):
     def Talker(self):
         object_centroids = self.getCentroid()
         self.object_pose_pub.publish(self.objects)
+    
+    
         
         
     def getCentroid(self):
