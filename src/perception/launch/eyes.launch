@@ -1,0 +1,8 @@
+<launch>
+    <node
+        name="Vrx_Eyes"
+        pkg="perception"
+        type="vrx_eyes"
+        respawn="false"
+        output="screen"/>
+</launch>

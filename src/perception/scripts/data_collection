@@ -1,0 +1,236 @@
+#!/usr/bin/env python3
+
+import os
+import random
+import sys
+import rospy
+import rospkg
+import time
+import tf
+import math
+import uuid
+import cv2
+from datetime import datetime
+from cv_bridge import CvBridge
+from tf.transformations import quaternion_from_euler
+from sensor_msgs.msg import Image
+from gazebo_msgs.msg import ModelState
+from gazebo_msgs.srv import SetModelState, DeleteModel, SpawnModel
+
+
+class DataCollection(object):
+    def __init__(self):
+        self.x_limit = [-510, -250]
+        self.y_limit = [200, 250]
+        self.ang_limit = [0, 359]
+
+        self.random_gen = 5 #5
+        self.degrees = 90 #90
+        self.radius_step = 5 #5
+        self.time = 1
+        self.buoy_id = "mb_marker_buoy_black"
+
+        self.collect_flag = False
+        self.flag_fl = True
+        self.flag_fr = True
+        self.bridge = CvBridge()
+        self.rospack = rospkg.RosPack()
+
+        self.init_pubs_subs()
+        self.init_wamv_buoy()
+
+        self.rate = rospy.Rate(1/self.time)    
+
+    def init_pubs_subs(self):
+        # self.sub_fl = rospy.Subscriber(
+        #     "/wamv/sensors/cameras/front_left_camera/image_raw", Image, self.fl_callback, queue_size=1)
+        # self.sub_fr = rospy.Subscriber(
+        #     "/wamv/sensors/cameras/front_right_camera/image_raw", Image, self.fr_callback, queue_size=1)
+
+        rospy.wait_for_service('/gazebo/set_model_state')
+        rospy.wait_for_service('/gazebo/delete_model')
+        rospy.wait_for_service('/gazebo/spawn_urdf_model')
+        self.set_obj_state = rospy.ServiceProxy(
+            '/gazebo/set_model_state', SetModelState)
+        self.del_wamv = rospy.ServiceProxy('/gazebo/delete_model', DeleteModel)
+        self.spawn_wamv = rospy.ServiceProxy('/gazebo/spawn_urdf_model', SpawnModel)
+
+    # initializes vars
+    def init_wamv_buoy(self):
+        self.wamv_pose = [-532, 162, 0.1, 0, 0, 0, 1]
+        self.model_names = ["mb_marker_buoy_black",
+                    "mb_marker_buoy_green",
+                    "mb_marker_buoy_red",
+                    "mb_marker_buoy_white",
+                    "mb_round_buoy_black",
+                    "mb_round_buoy_orange"]
+
+        pos = [-530, 163, 0.1]
+        self.roll = 0.0
+        self.pitch = 0.0
+        self.yaw = 0.0
+        quat = quaternion_from_euler(math.radians(
+            self.roll), math.radians(self.pitch), math.radians(self.yaw))
+
+        self.buoy = ModelState()
+        self.buoy.model_name = self.model_names[0]
+        self.buoy.pose.position.x = pos[0]
+        self.buoy.pose.position.y = pos[1]
+        self.buoy.pose.position.z = pos[2]
+        self.buoy.pose.orientation.x = quat[0]
+        self.buoy.pose.orientation.y = quat[1]
+        self.buoy.pose.orientation.z = quat[2]
+        self.buoy.pose.orientation.w = quat[3]
+        self.buoy.twist.linear.x = 0
+        self.buoy.twist.linear.y = 0
+        self.buoy.twist.linear.z = 0
+        self.buoy.twist.angular.x = 0
+        self.buoy.twist.angular.y = 0
+        self.buoy.twist.angular.z = 0
+        self.buoy.reference_frame = "world"
+
+        self.wamv = ModelState()
+        self.wamv.model_name = "wamv"
+        self.wamv.pose.position.x = self.wamv_pose[0]
+        self.wamv.pose.position.y = self.wamv_pose[1]
+        self.wamv.pose.position.z = self.wamv_pose[2]
+        self.wamv.pose.orientation.x = self.wamv_pose[3]
+        self.wamv.pose.orientation.y = self.wamv_pose[4]
+        self.wamv.pose.orientation.z = self.wamv_pose[5]
+        self.wamv.twist.linear.y = 0
+        self.wamv.twist.linear.z = 0
+        self.wamv.twist.angular.x = 0
+        self.wamv.twist.angular.y = 0
+        self.wamv.twist.angular.z = 0
+        self.wamv.reference_frame = "world"
+
+
+    def fl_callback(self, img_msg):
+        if self.collect_flag:
+            cv_image = self.bridge.imgmsg_to_cv2(img_msg, desired_encoding="passthrough")
+            im_rgb = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+            filename = str(uuid.uuid4()) + ".jpg"
+
+            if self.flag_fl:
+                datetime_str = datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
+
+                self.folder_path_fl = self.rospack.get_path(
+                    'perception') + "/../../../data2/" + self.buoy_id + "/front_left/" + datetime_str
+                if not os.path.isdir(self.folder_path_fl):
+                    os.makedirs(self.folder_path_fl)
+                self.flag_fl = False
+
+
+            path = self.folder_path_fl + "/" + filename
+
+            cv2.imwrite(path, im_rgb)
+
+
+    def fr_callback(self, img_msg):
+        if self.collect_flag:
+            cv_image = self.bridge.imgmsg_to_cv2(img_msg, desired_encoding="passthrough")
+            im_rgb = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+            filename = str(uuid.uuid4()) + ".jpg"
+
+            if self.flag_fr:
+                datetime_str = datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
+
+                self.folder_path_fr = self.rospack.get_path(
+                    'perception') + "/../../../data2/" + self.buoy_id + "/front_right/" + datetime_str
+                if not os.path.isdir(self.folder_path_fr):
+                    os.makedirs(self.folder_path_fr)
+                self.flag_fr = False
+
+            path = self.folder_path_fr + "/" + filename
+
+            cv2.imwrite(path, im_rgb)
+
+    def data_collect(self):
+        for index, name in enumerate(self.model_names):
+            self.collect_flag = False
+            #time.sleep(1)
+            rospy.loginfo(name)
+
+            if index >= 1:
+                self.buoy.model_name = self.model_names[index - 1]
+                self.buoy.pose.position.y = -50
+                # send buoy into specified location
+                resp = self.set_obj_state(self.buoy)
+
+            self.buoy.model_name = name
+
+            for radius in range(5, 30, self.radius_step):
+
+                self.buoy_id = name
+                self.flag_fl = True
+                self.flag_fr = True
+                    
+                for count in range(self.random_gen):
+                    # x_pos = random.randint(self.x_limit[0], self.x_limit[1])
+                    # y_pos = random.randint(self.y_limit[0], self.y_limit[1])
+                    # ang = random.randint(self.ang_limit[0], self.ang_limit[1])
+                    x_pos = 100
+                    y_pos = 225
+                    ang = 60
+                    
+        
+                    # wamv_x = (radius*math.cos(math.radians(ang))) + x_pos
+                    # wamv_y = (radius*math.sin(math.radians(ang))) + y_pos
+                    wamv_ang = (ang + 180) % 360
+                    wamv_x = 110
+                    wamv_y = 235
+                    # wamv_ang = 60
+
+                    self.buoy.pose.position.x = x_pos
+                    self.buoy.pose.position.y = y_pos
+
+                    self.wamv.pose.position.x = wamv_x
+                    self.wamv.pose.position.y = wamv_y
+                    quat = quaternion_from_euler(math.radians(
+                        self.roll), math.radians(self.pitch), math.radians(wamv_ang))
+                    self.wamv.pose.orientation.x = quat[0]
+                    self.wamv.pose.orientation.y = quat[1]
+                    self.wamv.pose.orientation.z = quat[2]
+                    self.wamv.pose.orientation.w = quat[3]
+
+                    # send wamv into specified location
+                    resp = self.set_obj_state(self.wamv)
+
+                    for deg in range(0, 360, self.degrees):
+                        self.collect_flag = True
+
+                        self.yaw = self.yaw + deg
+                        quat = quaternion_from_euler(math.radians(
+                            self.roll), math.radians(self.pitch), math.radians(self.yaw))
+                        self.buoy.pose.orientation.x = quat[0]
+                        self.buoy.pose.orientation.y = quat[1]
+                        self.buoy.pose.orientation.z = quat[2]
+                        self.buoy.pose.orientation.w = quat[3]
+
+                        resp = self.set_obj_state(self.buoy)
+                        # print positions of wam-v and buoy
+                        rospy.loginfo("Buoy pose: ")
+                        rospy.loginfo(self.buoy.pose.position)
+                        rospy.loginfo("Wamv pose: ")
+                        rospy.loginfo(self.wamv.pose.position)
+                        rospy.loginfo("Relative position: %f : %f : %f", self.buoy.pose.position.x-self.wamv.pose.position.x, self.buoy.pose.position.y-self.wamv.pose.position.y, self.buoy.pose.position.z-self.wamv.pose.position.z)
+
+                        self.rate.sleep()
+
+                        if deg == 360:
+                            self.collect_flag = False
+
+
+
+def main():
+    rospy.init_node("data_collection")
+    
+    data = DataCollection()
+
+    data.data_collect()
+
+    rospy.signal_shutdown("Test Complete")
+
+
+if __name__ == '__main__':
+    main()

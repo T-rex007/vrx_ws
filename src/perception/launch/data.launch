@@ -1,0 +1,10 @@
+<launch>
+
+    <node
+        name="data_collection"
+        pkg="perception"
+        type="data_collection"
+        respawn="false"
+        output="screen"/>
+        
+</launch>

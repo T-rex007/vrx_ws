@@ -1,0 +1,24 @@
+item { 
+	name:'mb_marker_buoy_black'
+	id:1
+}
+item { 
+	name:'mb_marker_buoy_green'
+	id:2
+}
+item { 
+	name:'mb_marker_buoy_red'
+	id:3
+}
+item { 
+	name:'mb_marker_buoy_white'
+	id:4
+}
+item { 
+	name:'mb_round_buoy_black'
+	id:5
+}
+item { 
+	name:'mb_round_buoy_orange'
+	id:6
+}
