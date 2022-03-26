@@ -1,1 +1,1 @@
-# vrx_ws
+# VRX Competition

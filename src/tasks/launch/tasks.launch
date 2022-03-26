@@ -1,0 +1,23 @@
+<launch>
+    <!-- Start Tasks Package -->
+    <node 
+        name="tasks" 
+        pkg="tasks" 
+        type="tasks" 
+        output="screen"/>
+
+    <!-- Start Navigation Package -->
+    <!-- <node
+        name="nav"
+        pkg="navigation"
+        type="nav"
+        output="screen"/> -->
+
+    <!-- Start Perception Package -->
+    <node
+        name="vrx_eyes"
+        pkg="perception"
+        type="vrx_eyes"
+        output="screen"/>
+
+</launch>
