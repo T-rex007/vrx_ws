@@ -145,6 +145,7 @@ class VrxEyes(object):
         self.wamv_x_global = None
         self.wamv_y_global = None
         self.lidar_frame = None
+
         self.objects = {"Object": [],
                         "Relative Position": [], "Global Position": []}
         self.object_pose_pub = rospy.Publisher(
@@ -307,13 +308,13 @@ class VrxEyes(object):
                 len(list(preds))) if preds[i] == c_id]
             centroid = np.sum(
                 self.lidar_frame[cluster_points_indexes], axis=0)/(len(cluster_points_indexes))
+
             # temp = centroid[1]
             # centroid[1] = centroid[2]
             # centroid[2] = temp
             centroids.append(centroid)
             rospy.loginfo("Centroid : {} {}".format(c_id, centroid))
         return centroids
-
 
 def main():
     Vrx = VrxEyes()
@@ -322,7 +323,6 @@ def main():
     rospy.loginfo(np.__version__)
     rospy.loginfo(sys.path[1])
     rospy.spin()
-
 
 if (__name__ == '__main__'):
     main()
