@@ -2,132 +2,142 @@
 
 import rospy
 import numpy as np
-from sklearn.cluster import DBSCAN 
+from sklearn.cluster import DBSCAN
 from sensor_msgs.msg import PointCloud2, NavSatFix, Image
 from std_msgs.msg import String
-import tensorflow as tf 
+import tensorflow as tf
 from cv_bridge import CvBridge, CvBridgeError
 import ctypes
 import struct
-import os 
+import os
+import rospkg
 import sys
-import pcl
+#import pcl
 import ros_numpy
 import json
 import cv2
 import time
 
 # from sklearn.neighbors import KDTree
-# from sklearn.cluster import DBSCAN 
+# from sklearn.cluster import DBSCAN
+
 
 class DetectorTF2:
 
-	def __init__(self, path_to_checkpoint, path_to_labelmap, class_id=None, threshold=0.5):
-		# class_id is list of ids for desired classes, or None for all classes in the labelmap
-		self.class_id = class_id
-		self.Threshold = threshold
-		# Loading label map
-		self.category_index = self.readLabelMap(path_to_labelmap)
-		tf.keras.backend.clear_session()
-		start_time = time.time()
-		self.detect_fn = tf.saved_model.load(path_to_checkpoint)
-		end_time = time.time()
-		elapsed_time = end_time - start_time
-		print('Done! Took {} seconds'.format(elapsed_time))
+    def __init__(self, path_to_checkpoint, path_to_labelmap, class_id=None, threshold=0.5):
+        # class_id is list of ids for desired classes, or None for all classes in the labelmap
+        self.class_id = class_id
+        self.Threshold = threshold
+        # Loading label map
+        self.category_index = self.readLabelMap(path_to_labelmap)
+        tf.keras.backend.clear_session()
+        start_time = time.time()
+        self.detect_fn = tf.saved_model.load(path_to_checkpoint)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print('Done! Took {} seconds'.format(elapsed_time))
 
+    def DetectFromImage(self, img):
+        im_height, im_width, _ = img.shape
+        # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
+        input_tensor = np.expand_dims(img, 0)
+        detections = self.detect_fn(input_tensor)
 
-	def DetectFromImage(self, img):
-		im_height, im_width, _ = img.shape
-		# Expand dimensions since the model expects images to have shape: [1, None, None, 3]
-		input_tensor = np.expand_dims(img, 0)
-		detections = self.detect_fn(input_tensor)
+        bboxes = detections['detection_boxes'][0].numpy()
+        bclasses = detections['detection_classes'][0].numpy().astype(np.int32)
+        bscores = detections['detection_scores'][0].numpy()
+        det_boxes = self.ExtractBBoxes(
+            bboxes, bclasses, bscores, im_width, im_height)
 
-		bboxes = detections['detection_boxes'][0].numpy()
-		bclasses = detections['detection_classes'][0].numpy().astype(np.int32)
-		bscores = detections['detection_scores'][0].numpy()
-		det_boxes = self.ExtractBBoxes(bboxes, bclasses, bscores, im_width, im_height)
+        return det_boxes
 
-		return det_boxes
+    def ExtractBBoxes(self, bboxes, bclasses, bscores, im_width, im_height):
+        bbox = []
+        for idx in range(len(bboxes)):
+            if self.class_id is None or bclasses[idx] in self.class_id:
+                if bscores[idx] >= self.Threshold:
+                    y_min = int(bboxes[idx][0] * im_height)
+                    x_min = int(bboxes[idx][1] * im_width)
+                    y_max = int(bboxes[idx][2] * im_height)
+                    x_max = int(bboxes[idx][3] * im_width)
+                    class_label = self.category_index[int(
+                        bclasses[idx])]['name']
 
+                    bbox.append([x_min, y_min, x_max, y_max,
+                                class_label, float(bscores[idx]), idx])
+        return bbox
 
-	def ExtractBBoxes(self, bboxes, bclasses, bscores, im_width, im_height):
-		bbox = []
-		for idx in range(len(bboxes)):
-			if self.class_id is None or bclasses[idx] in self.class_id:
-				if bscores[idx] >= self.Threshold:
-					y_min = int(bboxes[idx][0] * im_height)
-					x_min = int(bboxes[idx][1] * im_width)
-					y_max = int(bboxes[idx][2] * im_height)
-					x_max = int(bboxes[idx][3] * im_width)
-					class_label = self.category_index[int(bclasses[idx])]['name']
+    def writeDetectionsToImage(self, image, boxes_list, det_time=None):
+        if not boxes_list:
+            return image  # input list is empty
+        img = image.copy()
+        for idx in range(len(boxes_list)):
+            x_min = boxes_list[idx][0]
+            y_min = boxes_list[idx][1]
+            x_max = boxes_list[idx][2]
+            y_max = boxes_list[idx][3]
+            cls = str(boxes_list[idx][4])
+            score = str(np.round(boxes_list[idx][-1], 2))
 
-					bbox.append([x_min, y_min, x_max, y_max, class_label, float(bscores[idx]), idx])
-		return bbox
+            text = cls + ": " + score
+            cv2.rectangle(img, (x_min, y_min), (x_max, y_max), (0, 255, 0), 1)
+            cv2.rectangle(img, (x_min, y_min - 20),
+                          (x_min, y_min), (255, 255, 255), -1)
+            cv2.putText(img, text, (x_min + 5, y_min - 7),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
 
+        if det_time != None:
+            fps = round(1000. / det_time, 1)
+            fps_txt = str(fps) + " FPS"
+            cv2.putText(img, fps_txt, (25, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
 
-	def writeDetectionsToImage(self, image, boxes_list, det_time=None):
-		if not boxes_list: return image  # input list is empty
-		img = image.copy()
-		for idx in range(len(boxes_list)):
-			x_min = boxes_list[idx][0]
-			y_min = boxes_list[idx][1]
-			x_max = boxes_list[idx][2]
-			y_max = boxes_list[idx][3]
-			cls =  str(boxes_list[idx][4])
-			score = str(np.round(boxes_list[idx][-1], 2))
+        return img
 
-			text = cls + ": " + score
-			cv2.rectangle(img, (x_min, y_min), (x_max, y_max), (0, 255, 0), 1)
-			cv2.rectangle(img, (x_min, y_min - 20), (x_min, y_min), (255, 255, 255), -1)
-			cv2.putText(img, text, (x_min + 5, y_min - 7), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+    def readLabelMap(self, label_map_path):
+        item_id = None
+        item_name = None
+        items = {}
 
-		if det_time != None:
-			fps = round(1000. / det_time, 1)
-			fps_txt = str(fps) + " FPS"
-			cv2.putText(img, fps_txt, (25, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
+        with open(label_map_path, "r") as file:
+            for line in file:
+                line.replace(" ", "")
+                if line == "item{":
+                    pass
+                elif line == "}":
+                    pass
+                elif "id" in line:
+                    item_id = int(line.split(":", 1)[1].strip())
+                elif "name" in line:
+                    item_name = line.split(":", 1)[1].replace("'", "").strip()
 
-		return img
-	def readLabelMap(self, label_map_path):
-		item_id = None
-		item_name = None
-		items = {}
-		
-		with open(label_map_path, "r") as file:
-			for line in file:
-				line.replace(" ", "")
-				if line == "item{":
-					pass
-				elif line == "}":
-					pass
-				elif "id" in line:
-					item_id = int(line.split(":", 1)[1].strip())
-				elif "name" in line:
-					item_name = line.split(":", 1)[1].replace("'", "").strip()
+                if item_id is not None and item_name is not None:
+                    items[item_id] = {"id": item_id, "name": item_name}
+                    item_id = None
+                    item_name = None
 
-				if item_id is not None and item_name is not None:
-					items[item_id] = {"id":item_id, "name": item_name} 
-					item_id = None
-					item_name = None
+        return items
 
-		return items
 
 class VrxEyes(object):
     def __init__(self):
-        LABEL_MAP_PATH = "/home/t-rex/vrx_ws/src/perception/annotations/label_map.pbtxt"
+        self.rospack = rospkg.RosPack()
+        self.pkg_path = self.rospack.get_path("perception")
+        LABEL_MAP_PATH = self.pkg_path + "/annotations/label_map.pbtxt"
         # # ssd mobilenetpre trained
-        PATH_TO_SAVED_MODEL = "/home/t-rex/vrx_ws/src/perception/models/my_model/saved_model"
+        PATH_TO_SAVED_MODEL = self.pkg_path + "/models/my_model/saved_model"
         # Refernce Square coordinates
         bottom_left = [283, 574]
-        top_left = [407,426]
-        top_right = [703,421]
-        bottom_right = [737,570]
+        top_left = [407, 426]
+        top_right = [703, 421]
+        bottom_right = [737, 570]
         self.i = 0
-        
+
         # Destination Parameters
         offset = 5
-        dst_size =  6
+        dst_size = 6
         s = (720, 1280, 3)
-        
+
         # Gps and Lidar
         self.countGps = 0
         self.countLidar = 0
@@ -135,40 +145,40 @@ class VrxEyes(object):
         self.wamv_x_global = None
         self.wamv_y_global = None
         self.lidar_frame = None
-        self.objects = {"Object":[], "Relative Position":[], "Global Position": []}
-        self.object_pose_pub = rospy.Publisher('/Wamv/Peception/RelativeAndGlobalObjectPose', String, queue_size=10)
-        self.object_objectbbox = rospy.Publisher('/Wamv/Peception/Object_Detection', String, queue_size=10)
-        self.detections_pub = rospy.Publisher("/wamv/Perception/ImageWithDetections", Image, queue_size=10)
+        self.objects = {"Object": [],
+                        "Relative Position": [], "Global Position": []}
+        self.object_pose_pub = rospy.Publisher(
+            '/Wamv/Peception/RelativeAndGlobalObjectPose', String, queue_size=10)
+        self.object_objectbbox = rospy.Publisher(
+            '/Wamv/Peception/Object_Detection', String, queue_size=10)
+        self.detections_pub = rospy.Publisher(
+            "/wamv/Perception/ImageWithDetections", Image, queue_size=10)
         # Calibration  points for perspective transform
-        ## CV bridge for image retrieval from topic
+        # CV bridge for image retrieval from topic
         self.bridge = CvBridge()
-        ## Reference and Destination points
-        self.ref_points = np.float32([ top_left, top_right,bottom_right, bottom_left])
-        self.dst = np.float32([[s[1]/2-dst_size, s[0] - offset- (2*dst_size)],
-                  [s[1]/2+dst_size, s[0] - offset- (2*dst_size)],
-                  [s[1]/2+dst_size, s[0] - offset ],
-                  [s[1]/2-dst_size, s[0] - offset ]]
-                )
+        # Reference and Destination points
+        self.ref_points = np.float32(
+            [top_left, top_right, bottom_right, bottom_left])
+        self.dst = np.float32([[s[1]/2-dst_size, s[0] - offset - (2*dst_size)],
+                               [s[1]/2+dst_size, s[0] - offset - (2*dst_size)],
+                               [s[1]/2+dst_size, s[0] - offset],
+                               [s[1]/2-dst_size, s[0] - offset]]
+                              )
 
-        
         self.matrix = cv2.getPerspectiveTransform(self.ref_points, self.dst)
         # Object detection Model
-        self.ssd_mobilenet_model = DetectorTF2(PATH_TO_SAVED_MODEL, 
-                                                     LABEL_MAP_PATH, class_id=None, threshold=0.2)        
-        
+        self.ssd_mobilenet_model = DetectorTF2(PATH_TO_SAVED_MODEL,
+                                               LABEL_MAP_PATH, class_id=None, threshold=0.2)
 
     def roverCentriCoordinate(self, point):
         c1, c2 = point
         s = (720, 1280, 3)
-        y_pix = c2 -  s[1]/2
+        y_pix = c2 - s[1]/2
         x_pix = s[1]/2 - c1
         return x_pix, y_pix
-    
-    
-    
+
     def computeRowAngle(self, rover_centric_coord):
         return np.arctan(rover_centric_coord[1]/rover_centric_coord[0])
-    
 
     def covertBoxesToDictionary(self, bboxes):
         out_dict = {}
@@ -186,7 +196,8 @@ class VrxEyes(object):
                 "longitude": None,
             }
         return out_dict
- def appendBoxCenterAndRowAngle(self, bboxes):
+
+    def appendBoxCenterAndRowAngle(self, bboxes):
         """Return bboxes with center point added to bboxes
         args: 
             bboxes - 
@@ -194,12 +205,13 @@ class VrxEyes(object):
         for i in range(len(bboxes)):
             x_center = int((bboxes[i][2] - bboxes[i][0])/2)
             y_center = int((bboxes[i][1] - bboxes[i][3])/2)
-            obj_pos = list(cv2.perspectiveTransform(np.array([[[x_center,y_center]]], dtype = "float32"), self.matrix).ravel())
+            obj_pos = list(cv2.perspectiveTransform(
+                np.array([[[x_center, y_center]]], dtype="float32"), self.matrix).ravel())
             rov_cen_coord = self.roverCentriCoordinate(obj_pos)
             row_ang = self.computeRowAngle(rov_cen_coord)
             bboxes[i].append(row_ang)
         return bboxes
-    
+
     def imageCallback(self, msg):
         rospy.loginfo("Received an image!")
         try:
@@ -208,20 +220,24 @@ class VrxEyes(object):
         except CvBridgeError as e:
             rospy.loginfo(e)
         else:
-            detections = self.ssd_mobilenet_model.DetectFromImage(np.copy(cv2_img))
-            det_imag = self.ssd_mobilenet_model.writeDetectionsToImage(cv2_img, detections)
-            ### Debug purposes
-            cv2.imwrite("/home/t-rex/vrx_ws/src/perception/debug_images/image{}.jpg".format(self.i), det_imag)
-            self.i = self.i +1 
+            detections = self.ssd_mobilenet_model.DetectFromImage(
+                np.copy(cv2_img))
+            det_imag = self.ssd_mobilenet_model.writeDetectionsToImage(
+                cv2_img, detections)
+            img_path = "/debug_images/image{}.jpg".format(self.i)
+            full_path = self.pkg_path + img_path
+            # Debug purposes
+            cv2.imwrite(full_path, det_imag)
+            self.i = self.i + 1
             detections = self.appendBoxCenterAndRowAngle(detections)
-            self.object_objectbbox.publish(detections)
-            
-            rospy.loginfo(det_imag.shape) 
-            image_message = self.bridge.cv2_to_imgmsg(det_imag, encoding="passthrough")
+            self.object_objectbbox.publish(str(detections))
+
+            rospy.loginfo(det_imag.shape)
+            image_message = self.bridge.cv2_to_imgmsg(
+                det_imag, encoding="passthrough")
             self.detections_pub.publish(image_message)
             rospy.loginfo(self.covertBoxesToDictionary(detections))
-     
-                  
+
     def lidarCallback(self, msg):
         """
             <Description>
@@ -230,9 +246,11 @@ class VrxEyes(object):
         """
         self.lidar_frame = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(msg)
         self.i = self.i + 1
-        np.save("/home/t-rex/vrx_ws/src/perception/debug_lidar_frames/numfile{}.npy".format(self.i),self.lidar_frame)
+        np_path = "/debug_lidar_frames/numfile{}.npy".format(self.i)
+        full_path = self.pkg_path + np_path
+        #np.save(full_path, self.lidar_frame)
         self.countLidar += 1
-        if(self.countLidar%2 == 0):
+        if(self.countLidar % 2 == 0):
             rospy.loginfo("Lidar Data")
             rospy.loginfo(self.lidar_frame.shape)
             self.getCentroid()
@@ -245,11 +263,10 @@ class VrxEyes(object):
         """
         self.wamv_postition = msg
         self.countGps += 1
-        if(self.countGps%2 == 0):
+        if(self.countGps % 2 == 0):
             rospy.loginfo("GPS Data")
             rospy.loginfo(msg)
-        
-    
+
     def sensorListener(self):
         """
             Subcriber for the lidar and GPS topics
@@ -258,43 +275,45 @@ class VrxEyes(object):
         """
         rospy.loginfo("Listening")
         rospy.Subscriber("/wamv/sensors/lidars/lidar_wamv/points",
-                         data_class = PointCloud2, callback = self.lidarCallback
+                         data_class=PointCloud2, callback=self.lidarCallback
                          )
-        rospy.Subscriber("/wamv/sensors/gps/gps/fix",data_class = NavSatFix,
-                         callback = self.gpsCallback
+        rospy.Subscriber("/wamv/sensors/gps/gps/fix", data_class=NavSatFix,
+                         callback=self.gpsCallback
                          )
-        rospy.Subscriber("/wamv/sensors/cameras/front_right_camera/image_raw", Image, self.imageCallback)
-    
+        rospy.Subscriber(
+            "/wamv/sensors/cameras/front_right_camera/image_raw", Image, self.imageCallback)
+
     def Talker(self):
         object_centroids = self.getCentroid()
         self.object_pose_pub.publish(self.objects)
-    
-    
-        
-        
+
     def getCentroid(self):
         """
             <Description>
             Args:
             Returns:
         """
-        db = DBSCAN(eps = 0.3,metric = "euclidean", min_samples = 30, algorithm = "brute")
+        db = DBSCAN(eps=0.3, metric="euclidean",
+                    min_samples=30, algorithm="brute")
         preds = db.fit_predict(self.lidar_frame)
         n_clusters = len(set(preds)) - (1 if -1 in preds else 0)
         n_noise_pts = list(preds).count(-1)
         rospy.loginfo("Number of Noisy points: {}".format(n_noise_pts))
         rospy.loginfo("Number of clusters: {}".format(n_clusters))
         centroids = []
-        c_id =0
+        c_id = 0
         for c_id in range(n_clusters):
-            cluster_points_indexes = [ i for i in range(len(list(preds))) if preds[i] ==c_id]
-            centroid =np.sum(self.lidar_frame[cluster_points_indexes], axis = 0)/(len(cluster_points_indexes))
+            cluster_points_indexes = [i for i in range(
+                len(list(preds))) if preds[i] == c_id]
+            centroid = np.sum(
+                self.lidar_frame[cluster_points_indexes], axis=0)/(len(cluster_points_indexes))
             # temp = centroid[1]
             # centroid[1] = centroid[2]
             # centroid[2] = temp
             centroids.append(centroid)
-            rospy.loginfo("Centroid : {} {}".format(c_id, centroid))       
+            rospy.loginfo("Centroid : {} {}".format(c_id, centroid))
         return centroids
+
 
 def main():
     Vrx = VrxEyes()
@@ -304,7 +323,6 @@ def main():
     rospy.loginfo(sys.path[1])
     rospy.spin()
 
+
 if (__name__ == '__main__'):
     main()
-    
-
